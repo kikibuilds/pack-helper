@@ -7,7 +7,7 @@ set -euo pipefail
 
 APP="${HOME}/Library/Application Support/PackHelperMailer"
 SERVICE="PackHelperMailer"
-HOST_NAME="com.plushify.packhelper"
+HOST_NAME="com.packhelper.mailer"
 EXT_ID="ohpffalnkclojleccgidgjnlggnpjfab"   # 发货助手的扩展 ID（固定）
 HERE="$(cd "$(dirname "$0")" && pwd)"
 EMAIL_RE='^[^@[:space:],;]+@[^@[:space:],;]+\.[A-Za-z]{2,}$'
@@ -108,6 +108,10 @@ for BROWSER_DIR in "Google/Chrome" "Google/Chrome Beta" "Chromium" "Microsoft Ed
   BASE="${HOME}/Library/Application Support/${BROWSER_DIR}"
   if [ -d "${BASE}" ]; then
     mkdir -p "${BASE}/NativeMessagingHosts"
+    # 旧版用过别的注册名：删掉，只留现在这个
+    for OLD in "${BASE}/NativeMessagingHosts/"*packhelper*.json; do
+      if [ -e "${OLD}" ] && [ "$(basename "${OLD}")" != "${HOST_NAME}.json" ]; then rm -f "${OLD}"; fi
+    done
     printf '%s\n' "${MANIFEST}" > "${BASE}/NativeMessagingHosts/${HOST_NAME}.json"
     INSTALLED=1
   fi
@@ -118,13 +122,13 @@ if [ ${INSTALLED} -eq 0 ]; then
 fi
 echo "✓ 已让 Chrome 能直接调用邮件程序"
 
-# 旧版（V0.1.20 及以前）的文件夹监视：停掉，避免重复发信
-OLD_PLIST="${HOME}/Library/LaunchAgents/com.plushify.packhelper.mailer.plist"
-if [ -f "${OLD_PLIST}" ]; then
+# 旧版（V0.1.21 及以前）的文件夹监视：停掉，避免重复发信
+for OLD_PLIST in "${HOME}/Library/LaunchAgents/"*packhelper*.mailer.plist; do
+  [ -f "${OLD_PLIST}" ] || continue
   launchctl bootout "gui/$(id -u)" "${OLD_PLIST}" 2>/dev/null || true
   rm -f "${OLD_PLIST}"
   echo "✓ 已停用旧版的文件夹监视"
-fi
+done
 
 echo
 read -r -p "现在发一封测试邮件到 ${TESTTO} 吗？[Y/n]: " T

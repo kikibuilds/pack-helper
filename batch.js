@@ -644,27 +644,38 @@ async function renderRemoteLog() {
         <td class="st-${esc(e.state)}">${esc(e.result)}</td></tr>`).join('')}</table>`
     : '<p class="muted">还没有收到过远程指令。</p>';
 }
-$('#btnSaveRemote').addEventListener('click', async () => {
+/** 保存远程设置。开启状态下先检查每一项都填好了，有缺的就提示、不保存（返回 false）。 */
+async function saveRemote() {
   const allow = [...new Set($('#remoteAllow').value.split(/[\s,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean))];
-  const bad = allow.filter((a) => !EMAIL_RE.test(a));
-  if (bad.length) { alert(`这些不是有效的邮箱：${bad.join('、')}`); return; }
   const secret = $('#remoteSecret').value.trim();
   const enabled = $('#remoteEnabled').checked;
   const sendTo = $('#remoteSendTo').value;
-  if (enabled) {
-    if (!allow.length) { alert('请至少填一个「允许的邮箱」。'); return; }
-    if (secret.length < 4) { alert('暗号至少 4 个字。'); return; }
-    // 纯字母 / 纯中文、又比较短的暗号，很容易在普通邮件标题里碰巧出现（比如 SHIP 会匹配 Shipping、Shipped）
-    if (/^([a-z]+|[\u4e00-\u9fff]+)$/i.test(secret) && secret.length < 8
-      && !confirm(`暗号「${secret}」容易在普通邮件标题里碰巧出现（不分大小写，标题里包含就算，比如 SHIP 会匹配 Shipping / Shipped），可能误触发打包。\n\n建议点「随机生成」换一个。确定还是用这个吗？`)) return;
-    if (!sendTo) { alert('请先在上面「邮件」里添加收件人，再选「打包后发给」。'); return; }
-  }
   const s = await getSettings();
+  const bad = allow.filter((a) => !EMAIL_RE.test(a));
+  if (bad.length) { alert(`这些不是有效的邮箱：${bad.join('、')}`); return false; }
+  if (enabled) {
+    const missing = [];
+    if (!s.emailFrom || !EMAIL_RE.test(s.emailFrom)) missing.push('· 上面「邮件」里的发件邮箱（填好后点「保存邮件设置」）');
+    if (!allow.length) missing.push('· 允许的邮箱（至少一个）');
+    if (secret.length < 4) missing.push('· 暗号（至少 4 个字，可以点「随机生成」）');
+    if (!sendTo) missing.push('· 打包后发给（先在上面「邮件」里添加收件人并保存，再在这里选）');
+    if (missing.length) { alert(`还不能开启远程指令，下面这些没填好：\n\n${missing.join('\n')}`); return false; }
+    // 纯字母 / 纯中文、又比较短的暗号，很容易在普通邮件标题里碰巧出现（比如 SHIP 会匹配 Shipping、Shipped）
+    if (/^([a-z]+|[一-鿿]+)$/i.test(secret) && secret.length < 8
+      && !confirm(`暗号「${secret}」容易在普通邮件标题里碰巧出现（不分大小写，标题里包含就算，比如 SHIP 会匹配 Shipping / Shipped），可能误触发打包。\n\n建议点「随机生成」换一个。确定还是用这个吗？`)) return false;
+  }
   await saveSettings({ ...s, remote: { ...s.remote, enabled, allow, secret, sendTo, intervalMin: Number($('#remoteInterval').value) || 2, includePacked: $('#remoteIncludePacked').checked } });
   await renderRemote();
   showNote(enabled
-    ? `远程指令已开启：每 ${$('#remoteInterval').value} 分钟查一次收件箱。可以用 ${allow[0]} 发一封标题为「${secret} 状态」的邮件到 ${s.emailFrom} 试试。`
-    : '远程指令已关闭。');
+    ? `远程指令已开启并保存：每 ${$('#remoteInterval').value} 分钟查一次收件箱，打包后发给 ${sendTo === '__all__' ? '全部收件人' : sendTo}。可以用 ${allow[0]} 发一封标题为「${secret} 状态」的邮件到 ${s.emailFrom} 试试。`
+    : '远程指令已关闭（设置已保存）。');
+  return true;
+}
+$('#btnSaveRemote').addEventListener('click', () => saveRemote());
+// 勾「开启远程指令」就自动检查并保存；有没填好的，提示后自动取消勾选
+$('#remoteEnabled').addEventListener('change', async (ev) => {
+  const ok = await saveRemote();
+  if (!ok && ev.target.checked) ev.target.checked = false;
 });
 $('#btnPollNow').addEventListener('click', async () => {
   const box = $('#remotePollResult');
