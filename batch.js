@@ -1,8 +1,8 @@
 import {
   getOrders, updateOrder, removeOrder, duplicateOrder, clearBatch, getImage, getLabel, setLabel,
-  getPool, assignPool, removeFromPool, getSettings, saveSettings, clearSent, unmarkSent, AUTO_PLATFORMS, cleanOutDir,
+  getPool, assignPool, removeFromPool, getSettings, saveSettings, clearSent, unmarkSent, addManualOrder, AUTO_PLATFORMS, cleanOutDir,
 } from './lib/store.js';
-import { assignCodes, PLATFORM_META } from './lib/report.js';
+import { assignCodes, PLATFORM_META, shownOrderId } from './lib/report.js';
 import { exportPackage } from './lib/package.js';
 import { runAll, requestStop } from './lib/autorun.js';
 import { sendPackageMail, checkMailer } from './lib/mail.js';
@@ -66,7 +66,8 @@ async function render() {
     const badges = [
       r.prevPacked && !r.packedAt ? '<span class="badge">之前打包过<button class="unpack" data-act="unpack" title="去掉这个标记：当作没打包过的新订单">×</button></span>' : '',
       r.packedAt ? `<span class="badge done">已打包 ${esc(new Date(r.packedAt).toLocaleString('zh-CN', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }))}<button class="unpack" data-act="unpack" title="去掉「已打包」标记：当作没打包过的新订单">×</button></span>` : '',
-      (r.edited || []).length ? '<span class="badge" title="你改过的内容，重新拉取时会保留">已手动修改</span>' : '',
+      r.source === 'manual' ? '<span class="badge" title="在批次页手动添加的，重新拉取时不会被删掉">手动添加</span>'
+        : (r.edited || []).length ? '<span class="badge" title="你改过的内容，重新拉取时会保留">已手动修改</span>' : '',
     ].join(' ');
     // 面单状态：同一订单只看第一件
     let label = '<span class="muted">同上</span>';
@@ -87,7 +88,7 @@ async function render() {
         <td><textarea data-f="title" rows="2">${esc(r.title)}</textarea></td>
         <td><input class="w-sku" data-f="sku" value="${esc(r.sku)}" placeholder="无"></td>
         <td><input class="w-qty" data-f="qty" type="number" min="1" value="${r.qty}"></td>
-        <td><input class="w-oid" data-f="orderId" value="${esc(r.orderId)}"></td>
+        <td>${shownOrderId(r.orderId) || !r.orderId ? `<input class="w-oid" data-f="orderId" value="${esc(r.orderId)}">` : '<span class="muted" title="手动添加的包裹，没有订单号">（无订单号）</span>'}</td>
         <td class="labelcell" data-drop="${r.id}">${label}</td>
         <td class="actions">
           ${r.url ? `<a href="${esc(r.url)}" target="_blank" title="打开订单页">↗</a>` : ''}
@@ -592,7 +593,7 @@ chrome.storage.onChanged.addListener((changes) => {
   if (changes.scanStatus) showScan(changes.scanStatus.newValue);
   if (changes.remoteLog || changes.remoteLastPoll) renderRemoteLog();
   if (changes.orders && skipNextRender && !changes.labelPool) { skipNextRender = false; return; }
-  if (changes.orders || changes.labelPool) scheduleRender();
+  if (changes.orders || changes.labelPool) { scheduleRender(); if (changes.orders) renderManualPkgs(); }
 });
 
 // ===================== 远程指令（邮件触发） =====================
@@ -851,6 +852,79 @@ async function remoteResend() {
   return { ok: true, short: `已重发给 ${msg.to.join('、')}`, text: `已把 ${msg.zipName} 重新发给 ${msg.to.join('、')}。` };
 }
 
+// ===================== 手动添加订单 =====================
+async function renderManualPkgs() {
+  const orders = await getOrders();
+  const keep = $('#mPkg').value;
+  const inc = orders.filter((o) => o.include !== false);
+  const coded = new Map(assignCodes(inc).map((r) => [groupKey(r), r.code]));
+  const groups = new Map();
+  for (const o of orders) if (!groups.has(groupKey(o))) groups.set(groupKey(o), o);
+  const opts = [...groups.entries()].map(([k, o]) => {
+    const code = coded.get(k) || '（未勾选）';
+    const name = (PLATFORM_META[o.platform] || PLATFORM_META.other).name;
+    return { k, label: `${code} · ${name}${o.orderId && !/^手动-/.test(o.orderId) ? ` · 订单 ${o.orderId}` : ''} · ${String(o.title || o.sku || '').slice(0, 24)}`, code };
+  }).sort((a, b) => a.code.localeCompare(b.code));
+  $('#mPkg').innerHTML = '<option value="">新包裹（打包时自动编号）</option>'
+    + opts.map((x) => `<option value="${esc(x.k)}">加进 ${esc(x.label)}</option>`).join('');
+  if ([...$('#mPkg').options].some((o) => o.value === keep)) $('#mPkg').value = keep;
+  syncManualPkg(orders);
+}
+async function syncManualPkg(orders) {
+  const k = $('#mPkg').value;
+  const joining = !!k;
+  $('#mPlatform').disabled = joining;
+  $('#mOrderId').disabled = joining;
+  $('#mLabelHint').textContent = '';
+  if (joining) {
+    const same = (orders || await getOrders()).filter((o) => groupKey(o) === k);
+    if (same[0]) {
+      $('#mPlatform').value = PLATFORM_META[same[0].platform] && same[0].platform !== 'ebay' ? same[0].platform : 'other';
+      $('#mOrderId').value = /^手动-/.test(same[0].orderId || '') ? '' : (same[0].orderId || '');
+      if (same.some((o) => o.hasLabel)) $('#mLabelHint').textContent = '这个包裹已经有面单，可以不传';
+    }
+  }
+}
+$('#mPkg').addEventListener('change', () => syncManualPkg());
+$('#mImage').addEventListener('change', () => {
+  const f = $('#mImage').files[0];
+  const img = $('#mImagePreview');
+  if (f) { img.src = URL.createObjectURL(f); img.hidden = false; } else img.hidden = true;
+});
+function resetManual() {
+  for (const id of ['#mOrderId', '#mTitle', '#mSku', '#mImage', '#mLabel']) $(id).value = '';
+  $('#mQty').value = '1';
+  $('#mImagePreview').hidden = true;
+}
+$('#btnManualReset').addEventListener('click', resetManual);
+$('#btnManualAdd').addEventListener('click', async () => {
+  const title = $('#mTitle').value.trim();
+  const sku = $('#mSku').value.trim();
+  if (!title && !sku) { alert('商品名和 SKU 至少填一个。'); $('#mTitle').focus(); return; }
+  const qty = parseInt($('#mQty').value, 10);
+  if (!(qty >= 1)) { alert('数量至少是 1。'); $('#mQty').focus(); return; }
+  const labelFile = $('#mLabel').files[0] || null;
+  let labelBlob = null;
+  if (labelFile) {
+    const bytes = new Uint8Array(await labelFile.arrayBuffer());
+    const type = (bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) ? 'application/pdf'
+      : (bytes[0] === 0x89 && bytes[1] === 0x50) ? 'image/png' : (bytes[0] === 0xff && bytes[1] === 0xd8) ? 'image/jpeg' : '';
+    if (!type) { alert('面单只能是 PDF、PNG 或 JPG。'); return; }
+    labelBlob = new Blob([bytes], { type });
+  }
+  const imgFile = $('#mImage').files[0] || null;
+  try {
+    await addManualOrder({
+      joinGroup: $('#mPkg').value, platform: $('#mPlatform').value, orderId: $('#mOrderId').value,
+      title, sku, qty, imageBlob: imgFile, labelBlob,
+    });
+  } catch (e) { alert(e.message); return; }
+  resetManual();
+  await render();
+  await renderManualPkgs();
+  showNote(`已添加「${title || sku}」${$('#mPkg').value ? '到所选包裹' : '（新包裹）'}${labelBlob ? '，面单已对应' : '，还没有面单（可以之后在表格里拖进去）'}。`);
+});
+
 function showScan(s) {
   if (!s) return;
   const el = $('#scan');
@@ -868,8 +942,9 @@ function showScan(s) {
   await renderScanSummary();
   await renderEmails();
   $('#ver').textContent = `V${chrome.runtime.getManifest().version}`;
-  // 从插件弹窗点进来：#run（所有平台）或 #run=depop（只拉一个平台）
+  // 带 #run（所有平台）或 #run=depop（只拉一个平台）打开时直接开始拉取
   await renderRemote();
+  await renderManualPkgs();
   if (location.hash === '#remote') {
     history.replaceState(null, '', location.pathname);
     runRemoteJobs();

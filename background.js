@@ -21,6 +21,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
+// 点插件图标：直接打开批次页（已经开着就切过去）
+chrome.action.onClicked.addListener(async () => {
+  const url = chrome.runtime.getURL('batch.html');
+  const [tab] = await chrome.tabs.query({ url: `${url}*` });
+  if (tab && !/#remote/.test(tab.url || '')) {
+    await chrome.tabs.update(tab.id, { active: true });
+    await chrome.windows.update(tab.windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+});
+
 chrome.runtime.onInstalled.addListener(async () => {
   scheduleRemotePolling();
   const orders = await getOrders();

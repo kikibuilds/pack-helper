@@ -60,7 +60,33 @@
       </thead>
       <tbody id="rows"></tbody>
     </table>
-    <p id="empty" class="empty" hidden>批次是空的。点右上角「一键拉取订单」，或到平台的订单页点扩展图标 →「读取当前订单页」。</p>
+    <p id="empty" class="empty" hidden>批次是空的。点右上角「一键拉取订单」，或者用下面的「手动添加订单」。</p>
+
+    <details id="manualAdd" class="manual">
+      <summary>＋ 手动添加订单</summary>
+      <p class="muted">平台拉不到、或者线下卖出的订单，可以在这里手动加。加进已有包裹的，会和那个包裹装同一个箱子、共用一张面单。</p>
+      <div class="mgrid">
+        <label>打包编号
+          <select id="mPkg"></select>
+        </label>
+        <label>平台
+          <select id="mPlatform">
+            <option value="poshmark">Poshmark</option>
+            <option value="mercari">Mercari</option>
+            <option value="depop">Depop</option>
+            <option value="other">其他</option>
+          </select>
+        </label>
+        <label>订单号 <input id="mOrderId" placeholder="可以不填"></label>
+        <label class="wide">商品名 <input id="mTitle" placeholder="商品名或 SKU 至少填一个"></label>
+        <label>SKU <input id="mSku" placeholder="可以不填"></label>
+        <label>数量 <input id="mQty" type="number" min="1" value="1"></label>
+        <label>商品图片 <input id="mImage" type="file" accept="image/*"><img id="mImagePreview" alt="" hidden></label>
+        <label>面单（PDF 或图片） <input id="mLabel" type="file" accept="application/pdf,image/png,image/jpeg"><span id="mLabelHint" class="muted"></span></label>
+      </div>
+      <button id="btnManualAdd" class="go">添加到批次</button>
+      <button id="btnManualReset">清空</button>
+    </details>
   </section>
 
   <section>
@@ -81,7 +107,7 @@
     <p class="muted">「一键拉取订单」会依次打开这些页面。第一格填列表页地址（留空表示跳过该平台）；第二格填打开后要先点的筛选按钮上的文字，例如 Depop 的「To ship」。</p>
     <div id="listUrls"></div>
     <h3>订单详情链接规则</h3>
-    <p class="muted">「扫描本页所有订单」用的订单详情链接规则（正则）。平台改版后读不到时，在这里调整。</p>
+    <p class="muted">一键拉取时用来识别订单详情链接的规则（正则）。平台改版后读不到时，在这里调整。</p>
     <div id="patterns"></div>
     <button id="btnSaveSettings">保存设置</button>
     <h3>邮件</h3>
