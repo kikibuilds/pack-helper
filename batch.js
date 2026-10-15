@@ -9,6 +9,7 @@ import { sendPackageMail, checkMailer } from './lib/mail.js';
 import { buildEmail, DEFAULT_EMAIL_SUBJECT, DEFAULT_EMAIL_BODY, EMAIL_FIELDS } from './lib/report.js';
 import { ACTION_NAMES, takeNextJob, replyTo, updateRemoteLog } from './lib/remote.js';
 import { idbPut, idbGet, idbDel } from './lib/db.js';
+import { initI18n, setLang, getLang } from './lib/i18n.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -617,12 +618,15 @@ async function renderRemote() {
   await renderRemoteLog();
 }
 function renderRemoteHelp() {
-  const k = $('#remoteSecret').value.trim() || '暗号';
+  // 英文界面显示英文指令词（邮件程序中英文都认）
+  const en = getLang() === 'en';
+  const k = $('#remoteSecret').value.trim() || (en ? 'PASSPHRASE' : '暗号');
+  const w = en ? { pack: 'pack', pull: 'pull', status: 'status', resend: 'resend' } : { pack: '打包', pull: '拉取', status: '状态', resend: '重发' };
   $('#remoteHelp').innerHTML = [
-    [`${k} 打包`, ACTION_NAMES.pack + '：每次都先把全部平台重新拉一遍（最新状态），再打包、发邮件'],
-    [`${k} 拉取`, ACTION_NAMES.pull + '：拉取全部平台，回信列出会打包哪些订单、缺不缺面单、有没有平台要重新登录'],
-    [`${k} 状态`, '回信告诉你电脑、平台登录、上次运行的情况'],
-    [`${k} 重发`, ACTION_NAMES.resend],
+    [`${k} ${w.pack}`, ACTION_NAMES.pack + '：每次都先把全部平台重新拉一遍（最新状态），再打包、发邮件'],
+    [`${k} ${w.pull}`, ACTION_NAMES.pull + '：拉取全部平台，回信列出会打包哪些订单、缺不缺面单、有没有平台要重新登录'],
+    [`${k} ${w.status}`, '回信告诉你电脑、平台登录、上次运行的情况'],
+    [`${k} ${w.resend}`, ACTION_NAMES.resend],
   ].map(([a, b]) => `<li><code>${esc(a)}</code> ${esc(b)}</li>`).join('')
     + '<li>每封指令都会先回一封「收到」，做完再回一封结果；3 小时以前发的指令不会执行。</li>';
 }
@@ -934,6 +938,10 @@ function showScan(s) {
     : `扫描完成：新增 ${s.added} 条，失败 ${s.errors.length} 条。${s.errors.length ? '\n' + s.errors.join('\n') : ''}请逐行核对商品名、SKU 和数量。`;
   el.style.whiteSpace = 'pre-wrap';
 }
+
+// 中文 / English 切换（选择记在这台电脑的浏览器里）
+initI18n();
+$('#btnLang').addEventListener('click', () => { setLang(getLang() === 'en' ? 'zh' : 'en'); renderRemoteHelp(); });
 
 (async () => {
   await render();

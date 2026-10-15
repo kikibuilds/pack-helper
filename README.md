@@ -1,5 +1,7 @@
 # 发货助手 Pack Helper（Chrome 扩展）
 
+[English](README.en.md) · 批次页右上角的「English / 中文」按钮可以切换界面语言。
+
 > **English summary** — A Chrome (Manifest V3) extension for small resellers on **Poshmark, Mercari and Depop**. It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already logged into, then builds one zip per batch: a packing checklist (HTML/CSV) with item photos, SKUs and per-package checkboxes, all labels merged into one print-ready PDF with lookup cards, and instructions for the person who packs. An optional macOS helper (Python, stdlib only) emails the zip through Gmail and can run the whole flow remotely when you email it a command. The UI and docs are in Chinese. Not affiliated with any of these platforms — see "需要注意" below.
 
 把 Poshmark、Mercari、Depop 的待发货订单和预付面单收进一个"批次"，检查后一键生成发货文件，可以直接发邮件给打包的同事；人不在电脑旁时，还可以发一封邮件远程触发整个流程。
