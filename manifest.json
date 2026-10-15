@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "发货助手 Pack Helper",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "从 Poshmark、Mercari、Depop 收集待发货订单和预付面单，生成带图片的拣货单 + 面单的发货文件 (.zip)。",
   "permissions": [
     "storage",
