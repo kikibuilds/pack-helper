@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>发货助手 · 批次</title>
+  <link rel="stylesheet" href="batch.css">
+</head>
+<body>
+  <header>
+    <h1>发货批次</h1>
+    <span id="ver" class="muted"></span>
+    <span id="summary" class="muted"></span>
+    <div class="spacer"></div>
+    <select id="runScope" title="选择要拉取哪些平台的订单">
+      <option value="all">所有平台</option>
+      <option value="poshmark">只拉 Poshmark</option>
+      <option value="mercari">只拉 Mercari</option>
+      <option value="depop">只拉 Depop</option>
+    </select>
+    <button id="btnRun" class="primary" title="一键拉取所有平台订单（可在左边选择只拉某一个平台）">▶ 一键拉取订单</button>
+    <button id="btnStop" class="stop" disabled>■ 停止</button>
+    <button id="btnZip" class="go">⬇ 打包下载</button>
+    <span class="mailgroup">
+      <select id="mailTo" title="发给谁（在下方「设置」里添加邮箱）"></select>
+      <button id="btnMail" class="go" title="打包后直接用 Mac 上的邮件程序发出 zip，页面会显示发送成功或失败">✉ 打包并发邮件</button>
+    </span>
+    <button id="btnClear" class="danger">清空批次</button>
+  </header>
+
+  <div id="runBox" class="note run" hidden>
+    <div id="runMsg"></div>
+    <div class="muted">运行期间请保持这个页面打开，Chrome 会在后台开关一些标签页，这是正常的。订单会一边读一边出现在下面的表格里。</div>
+  </div>
+  <div id="remoteBanner" class="note run" hidden></div>
+  <div id="mailStatus" class="mailstatus" hidden></div>
+  <div id="note" class="note" hidden></div>
+  <div id="scan" class="note info" hidden></div>
+
+  <section id="scanSummary" hidden></section>
+
+  <section id="poolSection" hidden>
+    <h2>待分配面单</h2>
+    <p class="muted">这些 PDF 是自动截获或手动抓到的，还没确定属于哪个订单。选择订单后点「分配」。</p>
+    <div id="pool"></div>
+  </section>
+
+  <section>
+    <h2>订单</h2>
+    <p class="muted">
+      流程：①「一键拉取订单」把各平台待发货的订单和面单拉到这里 → ② 检查、修改（改过的内容重新拉取时会保留） → ③ 勾选要发的，点「打包下载」生成发货文件。<br>
+      面单一栏：<span class="ok">✓ 已对应</span> 可以点「打开」查看；<span class="miss">缺面单</span> 会写原因，可以点「订单页」去平台下载，再「选择」或把 PDF 拖进这一格。
+    </p>
+    <div class="tablebar">
+      <label class="check"><input type="checkbox" id="checkAll"> 全选</label>
+      <span id="tableInfo" class="muted"></span>
+    </div>
+    <table>
+      <thead>
+        <tr><th>打包</th><th>编号</th><th>平台</th><th>图片</th><th>商品名</th><th>SKU</th><th>数量</th><th>订单号</th><th>面单</th><th></th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p id="empty" class="empty" hidden>批次是空的。点右上角「一键拉取订单」，或到平台的订单页点扩展图标 →「读取当前订单页」。</p>
+  </section>
+
+  <section>
+    <div id="lastRun" class="muted lastrun"></div>
+  </section>
+
+  <details id="settings">
+    <summary>设置</summary>
+    <h3>发货文件保存位置</h3>
+    <p class="muted">
+      发货文件保存在：<b>Chrome 的「下载内容」文件夹</b> / <b id="outDirShow">发货</b> / 发货_日期时间 /<br>
+      这里可以改子文件夹的名字（可以多层，例如 <code>发货/2026</code>）。要换整个根目录（比如换到另一个磁盘），请到 Chrome 的「设置 → 下载内容 → 位置」里改 —— Chrome 只允许扩展把文件存在下载文件夹里面。<br>
+      改了子文件夹不影响发邮件。
+    </p>
+    <div class="patrow"><span>子文件夹</span><input id="outDir" placeholder="发货"></div>
+    <label class="check"><input type="checkbox" id="autoCapture"> 自动截获从这几个平台下载的面单 PDF</label>
+    <h3>待发货列表页地址</h3>
+    <p class="muted">「一键拉取订单」会依次打开这些页面。第一格填列表页地址（留空表示跳过该平台）；第二格填打开后要先点的筛选按钮上的文字，例如 Depop 的「To ship」。</p>
+    <div id="listUrls"></div>
+    <h3>订单详情链接规则</h3>
+    <p class="muted">「扫描本页所有订单」用的订单详情链接规则（正则）。平台改版后读不到时，在这里调整。</p>
+    <div id="patterns"></div>
+    <button id="btnSaveSettings">保存设置</button>
+    <h3>邮件</h3>
+    <p class="muted">「✉ 打包并发邮件」打包后，会直接交给 Mac 上的邮件程序，用下面的<b>发件邮箱</b>发给选中的收件人，页面上会显示发送成功或失败；只点「打包下载」不会发邮件。<br>
+      发件邮箱需要是 Gmail，并且在 Mac 上运行过一次这个版本的 <code>mailer/install.sh</code>，为这个邮箱保存应用专用密码（换发件邮箱后也要为新邮箱运行一次）。</p>
+    <div class="patrow"><span>发件邮箱</span><input id="emailFrom" placeholder="example@gmail.com"></div>
+    <div class="muted">收件人（每行一个，最多 5 个，比如你自己和打包同事）：</div>
+    <textarea id="emailList" rows="3" placeholder="example@gmail.com"></textarea>
+    <div class="patrow"><span>密送（BCC）</span><input id="emailBcc" placeholder="example@gmail.com（可留空）"></div>
+    <div class="muted">每封发货邮件都会悄悄抄一份给这里的邮箱（比如你自己），用来确认已经发出；收件人看不到密送。多个用逗号隔开，最多 3 个。</div>
+    <h3>邮件标题和正文</h3>
+    <div class="patrow"><span>标题</span><input id="emailSubject"></div>
+    <div class="muted">正文：</div>
+    <textarea id="emailBody" rows="7" class="mailtpl"></textarea>
+    <div class="muted">可以用这些占位符，发信时会自动换成实际内容：</div>
+    <ul id="emailFields" class="muted fields"></ul>
+    <div class="muted">预览（用示例订单）：</div>
+    <pre id="mailPreview" class="mailpreview"></pre>
+    <button id="btnResetMailTpl">恢复默认标题和正文</button>
+    <button id="btnSaveEmails">保存邮件设置</button>
+    <button id="btnTestMail">测试邮件连接</button>
+    <div id="testMailResult" class="mailstatus" hidden></div>
+    <h3 id="remoteSettings">远程指令（邮件触发）</h3>
+    <p class="muted">人不在电脑旁时，用手机发一封邮件到<b>发件邮箱</b>（上面「邮件」里那个 Gmail），这台电脑会自动拉取订单、打包、发邮件给下面选的收件人，再回信告诉你结果。<br>
+      前提：这台电脑开着、不睡眠，Chrome 开着，三个平台在 Chrome 里保持登录。发件邮箱、密送、邮件标题和正文和上面「邮件」共用一套。</p>
+    <label class="check"><input type="checkbox" id="remoteEnabled"> 开启远程指令</label>
+    <div class="patrow"><span>允许的邮箱</span><textarea id="remoteAllow" rows="2" placeholder="example@gmail.com（每行一个，只有这些邮箱发来的指令才会执行）"></textarea></div>
+    <div class="patrow"><span>暗号</span><span class="inline"><input id="remoteSecret" placeholder="至少 4 个字，标题里要带上它"> <button id="btnGenSecret" class="small">随机生成</button></span></div>
+    <div class="patrow"><span>检查间隔</span><select id="remoteInterval"><option value="1">每 1 分钟</option><option value="2">每 2 分钟</option><option value="5">每 5 分钟</option><option value="10">每 10 分钟</option></select></div>
+    <div class="patrow"><span>打包后发给</span><select id="remoteSendTo"></select></div>
+    <label class="check"><input type="checkbox" id="remoteIncludePacked"> 远程打包时全选：批次里有面单的订单全部打包，包括之前打包过的（回信里会注明哪几单之前打包过）</label>
+    <div class="muted" style="margin-left:24px">不勾：只打包表格里勾选的订单，之前打包过的会跳过，避免同一单发两次。</div>
+    <div class="muted">指令写在邮件<b>标题</b>里（正文随便写或不写）：</div>
+    <ul id="remoteHelp" class="muted fields"></ul>
+    <button id="btnSaveRemote">保存远程设置</button>
+    <button id="btnPollNow">立即检查一次收件箱</button>
+    <div id="remotePollResult" class="mailstatus" hidden></div>
+    <div id="remoteLastPoll" class="muted"></div>
+    <details class="remotelog" open><summary>远程指令记录</summary><div id="remoteLog"></div></details>
+
+    <h3>已打包记录</h3>
+    <p class="muted">打包下载过的订单会被记住（45 天）。之后再拉取时，如果平台上还显示待发货，会标「之前打包过」并默认不勾选，避免重复发货。</p>
+    <button id="btnClearSent">清除已打包记录</button>
+  </details>
+
+  <script src="lib/pdf-lib.min.js"></script>
+  <script type="module" src="batch.js"></script>
+</body>
+</html>
