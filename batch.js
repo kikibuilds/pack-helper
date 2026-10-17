@@ -744,7 +744,9 @@ async function healthAction(type, busyText) {
   else if (res.skipped) box.textContent = `ℹ ${res.skipped}`;
   else if (type === 'heartbeatNow') box.textContent = `✅ 已报平安（监控服务返回 HTTP ${res.status}）。`;
   else {
-    const mail = res.mail ? (res.mail.ok ? `；已发提醒邮件给 ${res.mail.to}` : `；提醒邮件发送失败：${res.mail.error}`) : '';
+    const needsLogin = (res.results || []).some((r) => r.loggedIn === false);
+    const mail = res.mail ? (res.mail.ok ? `；已发提醒邮件给 ${res.mail.to}` : `；提醒邮件发送失败：${res.mail.error}`)
+      : (needsLogin ? '；没填（或没保存）「提醒发给」的邮箱，所以没发邮件' : '');
     box.textContent = `${(res.results || []).some((r) => r.loggedIn === false) ? '⚠' : '✅'} ${(res.results || []).map(describeLoginResult).join('；')}${mail}`;
   }
   await renderHealthLast();
