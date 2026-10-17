@@ -116,7 +116,6 @@ Everything depends on Chrome staying open on this computer with all three platfo
 - **Offline alerts**: an external heartbeat monitor emails you when the computer sleeps, loses power or goes offline — before you send a command.
 - **Daily sign-in check**: checks every morning that all three platforms are still signed in and warns before sessions expire.
 - **Scheduled runs**: e.g. pull and pack automatically every Monday and Thursday morning.
-- **eBay / Etsy / Shopify**: platforms where you buy labels yourself (international orders via Easyship).
 
 ## Notes
 
