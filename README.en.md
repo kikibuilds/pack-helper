@@ -90,6 +90,21 @@ The computer must stay on and awake, Chrome open, and all three platforms signed
 
 Open `打包清单.html` from the **unzipped** folder in Chrome. For each package, tick **picked** or **out of stock** for every item and **packed** or **problem** for the package, and add notes. Ticks and notes are saved in that browser. **Generate result** refuses to run until everything is ticked (missing ticks are outlined in yellow), then builds a table — problems first, packed packages folded into one line — that can be copied into an email or printed / saved as PDF with clickable order links.
 
+## Offline alerts, daily sign-in check and diagnostics
+
+Batch page → Settings → "Offline alerts and daily sign-in check"; the diagnostics page is "🩺 Diagnostics" at the top right of the batch page.
+
+**Offline alerts (heartbeat)**: when the computer sleeps, loses power or goes offline, the extension cannot send anything itself, so an external monitoring service does the alerting. The extension visits the service's "heartbeat URL" every few minutes; if no ping arrives in time, the service emails or pushes an alert to you.
+1. Sign up for a free monitoring service such as [healthchecks.io](https://healthchecks.io) (Better Stack, Cronitor and similar work too), create a check with a 5-minute period and a 10–30-minute grace time, and choose email or the phone app for notifications.
+2. Paste the URL it gives you (e.g. `https://hc-ping.com/…`) into "Heartbeat URL", tick "Enable offline alerts", click "Ping now" and confirm the service received it.
+3. The grace time prevents false alarms from a brief slow connection: you are alerted only after period + grace with no ping.
+
+**Daily sign-in check**: once a day the extension opens the Poshmark, Mercari and Depop to-ship lists in the background; if one lands on a sign-in page it emails "Alert email to" from the sender under "Email" (leave it empty to only record the result on the diagnostics page). It only looks — no clicks, no batch changes — and waits 15 minutes if a pull or remote command is running. "Check sign-in now" runs it immediately. The computer must be on and the mail helper installed.
+
+**Diagnostics page**: extension version, mail helper, each platform's sign-in status (from the daily check or the last pull, whichever is newer), heartbeat, remote commands, errors and label failures from the last pull, and orders still missing a label. When something goes wrong, click "⬇ Export diagnostics" or "Copy diagnostics" and send it to the developer: email addresses are masked; the passphrase, heartbeat URL key and buyer names/addresses are never included.
+
+The remote `status` reply also includes the last heartbeat and the last sign-in check.
+
 ## Running unattended: power loss and expired sign-ins
 
 Everything depends on Chrome staying open on this computer with all three platforms signed in. If you'll be away (even abroad), prepare like this:
@@ -105,16 +120,13 @@ Everything depends on Chrome staying open on this computer with all three platfo
 
 | Problem | How you find out | Fix |
 |---|---|---|
-| A platform sign-in expired | Remote replies and the `status` reply say "X needs you to sign in again" | Connect by remote desktop, sign in again in Chrome, resend the command |
+| A platform sign-in expired | The daily sign-in check emails you; remote replies and the `status` reply also say "X needs you to sign in again" | Connect by remote desktop, sign in again in Chrome, resend the command |
 | Network hiccup | The reply / page shows why sending failed | It retries automatically; otherwise send `PASSPHRASE resend` |
-| Computer asleep, power loss, Chrome closed | No "received" reply after a command | Wake it or open Chrome by remote desktop; after a power cut it restarts by itself; if all else fails, ask someone on site to press the power button |
-| A platform redesign breaks reading | Replies / "This pull" show failures and diagnostics | Send the diagnostics to the developer (contact below) |
+| Computer asleep, power loss, Chrome closed | With offline alerts on, the monitoring service emails / pushes you; otherwise no "received" reply after a command | Wake it or open Chrome by remote desktop; after a power cut it restarts by itself; if all else fails, ask someone on site to press the power button |
+| A platform redesign breaks reading | Replies / "This pull" / the diagnostics page show failures | Export diagnostics from the diagnostics page and send it to the developer (contact below) |
 
 ## Planned features
 
-- **Diagnostics page**: one place for run errors, sign-in status and label failures, with one-click export for bug reports.
-- **Offline alerts**: an external heartbeat monitor emails you when the computer sleeps, loses power or goes offline — before you send a command.
-- **Daily sign-in check**: checks every morning that all three platforms are still signed in and warns before sessions expire.
 - **Scheduled runs**: e.g. pull and pack automatically every Monday and Thursday morning.
 
 ## Notes

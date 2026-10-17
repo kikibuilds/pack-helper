@@ -86,14 +86,17 @@
 - V0.3.0：打包清单的「已打包 / 有问题」改成二选一，生成结果前检查漏勾；打印 / 存 PDF 时订单号保留为链接；去掉不需要的「只有面单」合并 PDF；远程指令勾「开启」时自动检查并保存设置；邮件程序注册名改为中性的 `com.packhelper.mailer`，准备开源。
 - V0.3.1：插件图标直接打开批次页（去掉弹出小窗口，所有操作都在批次页完成）；手动添加订单挪到批次页，可以选包裹、平台，上传图片和面单。
 
+### 阶段五：运行状况（V0.6.0）
+- **掉线报警**：电脑睡眠 / 断电时扩展自己什么都发不出去，只能由外部监控服务（healthchecks.io 之类，「超过 N 分钟没收到心跳就报警」）来发现。`lib/health.js` 用 `chrome.alarms` 每 1～15 分钟 GET 一次用户填的心跳网址（只允许 https，不带 cookie），结果记在 `heartbeatLast`。
+- **每日登录检查**：`chrome.alarms` 在每天设定时间触发（`when` = 下一个 HH:MM，`periodInMinutes` = 1440），在后台依次打开三个平台的待发货列表，等 3.5 秒看地址有没有跳到 login / sign-in / auth；需要重新登录就通过现有的 Native Messaging 邮件程序发提醒（不带附件）。一键拉取 / 远程指令运行中时推迟 15 分钟（只补一次）。没有做「快过期提前提醒」：平台不告诉剩余时间，按 cookie 估算需要新权限而且不准。
+- **诊断页面** `diag.html`：只读已有的记录（`lastScan`、`lastRun`、`lastMail`、`remoteLastPoll`、`remoteLog`、批次里缺面单的订单）和新的 `heartbeatLast` / `loginCheckLog`，整理逻辑在纯函数 `lib/diag.js`。导出前邮箱打码、心跳网址只留路径前 4 位，暗号不导出。导出用 `chrome.downloads`（`<a download>` 配中文文件名在部分环境会变成「download」）。
+- 测试：Playwright + 本地 HTTPS 模拟平台（Poshmark 跳登录页）和心跳服务；邮件程序按真实方式注册成 Native Messaging host（`<user-data-dir>/NativeMessagingHosts/`），用 `PACKHELPER_FAKE_SMTP` 把邮件存成 .eml 核对。Linux 无头 Chromium 要设 `LANG=C.UTF-8`，否则 `chrome.downloads` 拒绝中文文件名。
+
 ## 4. 测试方法
 
 所有功能都在本地用 Playwright + 真实 Chromium（加载扩展）+ 本地 HTTPS 模拟服务器（`--host-resolver-rules` 把平台域名指到本机）做端到端测试：模拟 Poshmark 订单页和下载弹窗、Depop 列表和 blob 下载、Mercari 订单页 / 商品页；邮件程序用 `PACKHELPER_FAKE_SMTP`（把邮件存成 .eml）和 `PACKHELPER_FAKE_IMAP`（目录里的 .eml 当收件箱）测试，不会真的发信。真实平台上的效果以实际拉取为准。
 
 ## 5. 以后可以做
 
-- 诊断页面：集中显示每次运行的报错、登录状态、面单抓取失败原因，一键导出诊断信息方便反馈。
-
 - 定时运行（比如每周一、四早上 8 点）。
-- 电脑掉线报警（外部心跳监控）、每日登录状态检查。
 - 员工发回的发货结果邮件自动读取，在批次页标出缺货的订单。

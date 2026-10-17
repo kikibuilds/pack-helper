@@ -25,6 +25,7 @@
       <button id="btnMail" class="go" title="打包后直接用 Mac 上的邮件程序发出 zip，页面会显示发送成功或失败">✉ 打包并发邮件</button>
     </span>
     <button id="btnClear" class="danger">清空批次</button>
+    <a id="lnkDiag" class="manuallink" href="diag.html" target="_blank" title="运行报错、各平台登录状态、面单抓取失败原因，可以一键导出">🩺 诊断</a>
     <a id="lnkManual" class="manuallink" href="https://github.com/kikibuilds/pack-helper#readme" target="_blank" rel="noopener" title="不知道怎么做时，看这里的使用手册">📖 使用手册</a>
     <button id="btnLang" class="lang" title="中文 / English" data-noi18n>English</button>
   </header>
@@ -149,6 +150,22 @@
     <div id="remotePollResult" class="mailstatus" hidden></div>
     <div id="remoteLastPoll" class="muted"></div>
     <details class="remotelog" open><summary>远程指令记录</summary><div id="remoteLog"></div></details>
+
+    <h3 id="healthSettings">掉线报警和每日登录检查</h3>
+    <p class="muted"><b>掉线报警</b>：电脑睡眠、断电、断网时插件自己发不出任何提醒，所以要借助外部监控服务（比如免费的 <a href="https://healthchecks.io" target="_blank" rel="noopener">healthchecks.io</a>）。插件每隔几分钟访问一次它给的「心跳网址」报平安；超过设定时间没收到，监控服务就发邮件或推送给你。<br>
+      <b>每日登录检查</b>：每天定时在后台打开一次各平台的待发货列表，跳到登录页就用上面「邮件」里的发件邮箱发一封提醒。只看有没有登录，不点任何按钮。</p>
+    <label class="check"><input type="checkbox" id="hbEnabled"> 开启掉线报警（心跳）</label>
+    <div class="patrow"><span>心跳网址</span><input id="hbUrl" placeholder="https://hc-ping.com/……（监控服务给的网址）"></div>
+    <div class="patrow"><span>报平安间隔</span><select id="hbMin"><option value="1">每 1 分钟</option><option value="5">每 5 分钟（推荐）</option><option value="10">每 10 分钟</option><option value="15">每 15 分钟</option></select></div>
+    <div class="muted">在监控服务那边把「周期」设成和这里一样，「宽限时间」设 10～30 分钟；超过「周期 + 宽限时间」没收到心跳才会提醒你，避免偶尔网络慢误报。</div>
+    <label class="check"><input type="checkbox" id="lcEnabled"> 开启每日登录检查</label>
+    <div class="patrow"><span>每天几点</span><input id="lcTime" type="time" value="08:00" style="max-width:140px"></div>
+    <div class="patrow"><span>提醒发给</span><input id="lcNotify" placeholder="example@gmail.com（留空就只记录在诊断页面，不发邮件）"></div>
+    <button id="btnSaveHealth">保存设置</button>
+    <button id="btnBeatNow">立即报一次平安</button>
+    <button id="btnLoginCheckNow">立即检查一次登录</button>
+    <div id="healthResult" class="mailstatus" hidden></div>
+    <div id="healthLast" class="muted"></div>
 
     <h3>已打包记录</h3>
     <p class="muted">打包下载过的订单会被记住（45 天）。之后再拉取时，如果平台上还显示待发货，会标「之前打包过」并默认不勾选，避免重复发货。</p>

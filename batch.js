@@ -10,6 +10,7 @@ import { buildEmail, DEFAULT_EMAIL_SUBJECT, DEFAULT_EMAIL_BODY, EMAIL_FIELDS } f
 import { ACTION_NAMES, takeNextJob, replyTo, updateRemoteLog } from './lib/remote.js';
 import { idbPut, idbGet, idbDel } from './lib/db.js';
 import { initI18n, setLang, getLang } from './lib/i18n.js';
+import { validHeartbeatUrl, describeLoginResult } from './lib/health.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -693,6 +694,64 @@ $('#btnPollNow').addEventListener('click', async () => {
   await renderRemoteLog();
 });
 
+// ===================== 掉线报警（心跳）和每日登录检查 =====================
+async function renderHealth() {
+  const { health: h } = await getSettings();
+  $('#hbEnabled').checked = !!h.heartbeatEnabled;
+  $('#hbUrl').value = h.heartbeatUrl || '';
+  $('#hbMin').value = String(h.heartbeatMin || 5);
+  $('#lcEnabled').checked = !!h.loginCheckEnabled;
+  $('#lcTime').value = h.loginCheckTime || '08:00';
+  $('#lcNotify').value = h.loginCheckNotify || '';
+  await renderHealthLast();
+}
+async function renderHealthLast() {
+  const { heartbeatLast: hb, loginCheckLast: lc } = await chrome.storage.local.get(['heartbeatLast', 'loginCheckLast']);
+  const parts = [];
+  if (hb) parts.push(`上次报平安：${fmtTime(hb.at)}，${hb.ok ? '正常' : `失败：${hb.error}`}`);
+  if (lc) parts.push(`上次登录检查：${fmtTime(lc.at)}，${(lc.results || []).map(describeLoginResult).join('；')}`);
+  $('#healthLast').textContent = parts.join('　');
+}
+async function saveHealth() {
+  const s = await getSettings();
+  const heartbeatEnabled = $('#hbEnabled').checked;
+  const heartbeatUrl = $('#hbUrl').value.trim();
+  const loginCheckEnabled = $('#lcEnabled').checked;
+  const loginCheckNotify = $('#lcNotify').value.trim().toLowerCase();
+  const missing = [];
+  if (heartbeatEnabled && !validHeartbeatUrl(heartbeatUrl)) missing.push('· 心跳网址：监控服务给的网址，以 https:// 开头');
+  if (loginCheckNotify && !EMAIL_RE.test(loginCheckNotify)) missing.push('· 提醒发给：不是有效的邮箱');
+  if (loginCheckEnabled && loginCheckNotify && (!s.emailFrom || !EMAIL_RE.test(s.emailFrom))) missing.push('· 上面「邮件」里的发件邮箱（提醒邮件要用它发；填好后点「保存邮件设置」）');
+  if (missing.length) { alert(`还不能保存，下面这些没填好：\n\n${missing.join('\n')}`); return false; }
+  await saveSettings({ ...s, health: { ...s.health, heartbeatEnabled, heartbeatUrl, heartbeatMin: Number($('#hbMin').value) || 5, loginCheckEnabled, loginCheckTime: $('#lcTime').value || '08:00', loginCheckNotify } });
+  await renderHealth();
+  showNote([
+    heartbeatEnabled ? `掉线报警已开启：每 ${$('#hbMin').value} 分钟报一次平安。` : '掉线报警已关闭。',
+    loginCheckEnabled ? `每日登录检查已开启：每天 ${$('#lcTime').value}${loginCheckNotify ? `，需要重新登录时发邮件给 ${loginCheckNotify}` : '，只记录不发邮件'}。` : '每日登录检查已关闭。',
+  ].join(''));
+  return true;
+}
+$('#btnSaveHealth').addEventListener('click', () => saveHealth());
+for (const id of ['#hbEnabled', '#lcEnabled']) {
+  $(id).addEventListener('change', async (ev) => { const ok = await saveHealth(); if (!ok && ev.target.checked) ev.target.checked = false; });
+}
+async function healthAction(type, busyText) {
+  const box = $('#healthResult');
+  box.hidden = false; box.className = 'mailstatus'; box.textContent = busyText;
+  const res = await chrome.runtime.sendMessage({ type });
+  box.className = `mailstatus ${res && res.ok ? 'ok' : 'fail'}`;
+  if (!res || (!res.ok && res.error)) box.innerHTML = `❌ 失败：<div class="err">${esc((res && res.error) || '没有回应')}</div>`;
+  else if (res.skipped) box.textContent = `ℹ ${res.skipped}`;
+  else if (type === 'heartbeatNow') box.textContent = `✅ 已报平安（监控服务返回 HTTP ${res.status}）。`;
+  else {
+    const mail = res.mail ? (res.mail.ok ? `；已发提醒邮件给 ${res.mail.to}` : `；提醒邮件发送失败：${res.mail.error}`) : '';
+    box.textContent = `${(res.results || []).some((r) => r.loggedIn === false) ? '⚠' : '✅'} ${(res.results || []).map(describeLoginResult).join('；')}${mail}`;
+  }
+  await renderHealthLast();
+}
+$('#btnBeatNow').addEventListener('click', () => healthAction('heartbeatNow', '正在报平安…（用的是已保存的心跳网址）'));
+$('#btnLoginCheckNow').addEventListener('click', () => healthAction('loginCheckNow', '正在检查…会在后台打开三个平台的待发货列表，大约 30 秒。'));
+
 /** 远程指令自动打开的批次页：依次执行排队的指令，做完自动关闭 */
 async function runRemoteJobs() {
   document.title = '发货助手 · 正在执行远程指令';
@@ -952,6 +1011,7 @@ $('#btnLang').addEventListener('click', () => { setLang(getLang() === 'en' ? 'zh
   $('#ver').textContent = `V${chrome.runtime.getManifest().version}`;
   // 带 #run（所有平台）或 #run=depop（只拉一个平台）打开时直接开始拉取
   await renderRemote();
+  await renderHealth();
   await renderManualPkgs();
   if (location.hash === '#remote') {
     history.replaceState(null, '', location.pathname);

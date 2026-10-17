@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>发货助手 · 诊断</title>
+  <link rel="stylesheet" href="batch.css">
+  <style>
+    .status { display: grid; grid-template-columns: 170px 1fr; gap: 4px 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; max-width: 900px; }
+    .status .k { color: #374151; font-weight: 600; }
+    .lv-ok::before { content: '✓ '; color: #047857; }
+    .lv-warn::before { content: '! '; color: #b45309; font-weight: 700; }
+    .lv-bad::before { content: '✗ '; color: #b91c1c; font-weight: 700; }
+    .lv-off { color: #9ca3af; }
+    .lv-bad { color: #b91c1c; }
+    .sec pre { white-space: pre-wrap; background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; max-width: 900px; font: 13px ui-monospace, Menlo, monospace; margin: 4px 0 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>诊断</h1>
+    <span id="ver" class="muted"></span>
+    <div class="spacer"></div>
+    <button id="btnMailer">检查邮件程序</button>
+    <button id="btnRefresh">刷新</button>
+    <button id="btnCopy">复制诊断信息</button>
+    <button id="btnExport" class="primary">⬇ 导出诊断信息</button>
+    <button id="btnLang" class="lang" title="中文 / English" data-noi18n>English</button>
+  </header>
+  <p class="muted">这里集中显示每次运行的报错、各平台登录状态、面单抓取失败的原因。遇到问题时点「导出诊断信息」，把文件发给开发者。导出的内容里邮箱已打码，不含暗号、心跳网址的密钥、买家姓名和地址。</p>
+  <div id="note" class="note" hidden></div>
+  <h2>状态</h2>
+  <div id="status" class="status"></div>
+  <div id="sections"></div>
+  <script type="module" src="diag.js"></script>
+</body>
+</html>

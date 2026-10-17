@@ -2,21 +2,36 @@
 import { extractOrderFromPage } from './lib/extract.js';
 import { addOrder, addToPool, autoAssign, detectPlatform, getSettings, getOrders, isPdfBytes } from './lib/store.js';
 import { pollOnce, scheduleRemotePolling } from './lib/remote.js';
+import { beatOnce, scheduleHeartbeat, loginCheckOnce, scheduleLoginCheck } from './lib/health.js';
 
 // ③ 远程指令：定时查收件箱（设置里开启后）
 chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === 'remotePoll') pollOnce('alarm').catch((e) => console.warn('remote poll', e));
+  if (a.name === 'heartbeat') beatOnce('alarm').catch((e) => console.warn('heartbeat', e));
+  if (a.name === 'loginCheck' || a.name === 'loginCheckRetry') loginCheckOnce('alarm').catch((e) => console.warn('login check', e));
 });
-chrome.runtime.onStartup.addListener(() => scheduleRemotePolling());
+chrome.runtime.onStartup.addListener(() => { scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck(); });
 chrome.storage.onChanged.addListener((changes) => {
   if (!changes.settings) return;
   const o = (changes.settings.oldValue || {}).remote || {};
   const n = (changes.settings.newValue || {}).remote || {};
   if (o.enabled !== n.enabled || o.intervalMin !== n.intervalMin) scheduleRemotePolling();
+  const ho = (changes.settings.oldValue || {}).health || {};
+  const hn = (changes.settings.newValue || {}).health || {};
+  if (ho.heartbeatEnabled !== hn.heartbeatEnabled || ho.heartbeatUrl !== hn.heartbeatUrl || ho.heartbeatMin !== hn.heartbeatMin) scheduleHeartbeat();
+  if (ho.loginCheckEnabled !== hn.loginCheckEnabled || ho.loginCheckTime !== hn.loginCheckTime) scheduleLoginCheck();
 });
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg && msg.type === 'remotePollNow') {
     pollOnce('manual').then(sendResponse, (e) => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+  if (msg && msg.type === 'heartbeatNow') {
+    beatOnce('manual').then(sendResponse, (e) => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+  if (msg && msg.type === 'loginCheckNow') {
+    loginCheckOnce('manual').then(sendResponse, (e) => sendResponse({ ok: false, error: e.message }));
     return true;
   }
 });
@@ -35,6 +50,8 @@ chrome.action.onClicked.addListener(async () => {
 
 chrome.runtime.onInstalled.addListener(async () => {
   scheduleRemotePolling();
+  scheduleHeartbeat();
+  scheduleLoginCheck();
   const orders = await getOrders();
   chrome.action.setBadgeText({ text: orders.length ? String(orders.length) : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });
