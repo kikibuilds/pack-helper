@@ -2,9 +2,9 @@
 
 [English](README.en.md) · 页面右上角的「English / 中文」按钮可以切换界面语言。
 
-> **English summary** — A Chrome (Manifest V3) extension for small resellers on **Poshmark, Mercari and Depop**. It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already logged into, then builds one zip per batch: a packing checklist (HTML/CSV) with item photos, SKUs and per-package checkboxes, all labels merged into one print-ready PDF with lookup cards, and instructions for the person who packs. An optional macOS helper (Python, stdlib only) emails the zip through Gmail and can run the whole flow remotely when you email it a command. The UI and docs are in Chinese. Not affiliated with any of these platforms — see "需要注意" below.
+> **English summary** — A Chrome (Manifest V3) extension for small resellers on **Poshmark, Mercari, Depop and Whatnot**. It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already logged into, then builds one zip per batch: a packing checklist (HTML/CSV) with item photos, SKUs and per-package checkboxes, all labels merged into one print-ready PDF with lookup cards, and instructions for the person who packs. An optional macOS helper (Python, stdlib only) emails the zip through Gmail and can run the whole flow remotely when you email it a command. The UI and docs are in Chinese. Not affiliated with any of these platforms — see "需要注意" below.
 
-把 Poshmark、Mercari、Depop 的待发货订单和预付面单收进一个"批次"，检查后一键生成发货文件，可以直接发邮件给打包的同事；人不在电脑旁时，还可以发一封邮件远程触发整个流程。
+把 Poshmark、Mercari、Depop、Whatnot 的待发货订单和预付面单收进一个"批次"，检查后一键生成发货文件，可以直接发邮件给打包的同事；人不在电脑旁时，还可以发一封邮件远程触发整个流程。
 
 ```
 发货_2026-10-14_183508.zip
@@ -19,7 +19,7 @@
     └── M01_Mercari_xxxx.pdf
 ```
 
-编号规则：P = Poshmark，M = Mercari，D = Depop。一个编号 = 一个包裹 = 一张面单；同一订单里的多件商品共用一个编号。打包清单不含买家姓名和地址。
+编号规则：P = Poshmark，M = Mercari，D = Depop，W = Whatnot。一个编号 = 一个包裹 = 一张面单；同一订单里的多件商品共用一个编号。打包清单不含买家姓名和地址。
 
 开发过程和每个版本改了什么见 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) 和 [CHANGELOG.md](CHANGELOG.md)。
 
@@ -58,7 +58,7 @@
 
 点浏览器工具栏上的扩展图标，打开发货助手首页（已经开着就切过去），点「🚚 发货」→「① 拉取订单」→「▶ 一键拉取订单」（旁边的下拉菜单可以只拉某一个平台），扩展会：
 
-1. 依次打开 Poshmark、Mercari、Depop 的待发货列表页（Depop 会先自动点「To ship」，只抓没发货的订单）；
+1. 依次打开 Poshmark、Mercari、Depop、Whatnot 的待发货列表页（Depop 会先自动点「To ship」，只抓没发货的订单；Whatnot 打开 Seller Hub → Shipments，已送达 / 已寄出的包裹自动跳过）；
 2. 逐单打开订单详情，读取商品名、图片、SKU、数量、订单号；
 3. 在订单页找「打印 / 下载面单」并抓取 PDF；
 4. 每次运行在 `发货/` 下新建一个文件夹 `发货_日期_时间/`，里面放发货 `发货_日期_时间.zip` 和报告 `报告_日期_时间.txt`；
@@ -68,6 +68,7 @@
 
 几个规则：
 - **绝不替你花钱**：带 Buy / Purchase / Pay / Confirm / Upgrade / $ 字样的按钮一律不点。
+- **Whatnot**：一个 Shipment（同一买家合在一起的几件）= 一个包裹，编号 W 开头。SKU 先看标题里的方括号 `[…]`，没有就读 packing slip 里 Attributes 的「Fields」。只下载已经生成好的面单；还是「Needs Label」的包裹标「缺面单」——扩展**不会替你点「Generate Label」**，请在 Whatnot 确认重量尺寸、生成面单后再拉取一次。
 - **不重复**：进过发货（且有面单）的订单会被记住 45 天，平台上还显示待发货也不会再打包。需要重打时，在「发货 → ⚙ 发货设置 → 清除已打包记录」；只想重打某一单，点那一行「已打包 / 之前打包过」标记上的 ×。
 - **缺面单的订单**会留在批次里，补上面单后会进入下一个发货文件；本次打包清单上会标红"先不要发"。
 - **登录过期**的平台会被跳过，并写进报告。
@@ -122,7 +123,7 @@
 
 「发货 → ② 批次与打包」订单表格下面「＋ 手动添加订单」：平台拉不到、或者线下卖出的订单在这里加。
 - **打包编号**：选「新包裹」（打包时自动编号），或者加进表格里已有的某个包裹（和它装同一个箱子、共用面单，平台和订单号自动跟它一样）。
-- **平台**：Poshmark / Mercari / Depop / 其他（其他的编号以 X 开头）。
+- **平台**：Poshmark / Mercari / Depop / Whatnot / 其他（其他的编号以 X 开头）。
 - **商品图片、商品名、SKU、数量、订单号、面单**（PDF 或图片）：商品名和 SKU 至少填一个，其余都可以不填；面单之后也可以拖到表格的「面单」格里。
 - 手动加的行重新拉取时不会被删掉或覆盖。
 
@@ -130,7 +131,7 @@
 
 ## 小功能
 
-- **SKU 记忆**：Poshmark / Mercari / Depop 没有 SKU 时，在「② 批次与打包」的表格里填一次，下次同名商品自动带出。
+- **SKU 记忆**：Poshmark / Mercari / Depop / Whatnot 没有 SKU 时，在「② 批次与打包」的表格里填一次，下次同名商品自动带出。
 - **多件订单**：点该行的「+件」，在同一个包裹下再加一件商品。
 
 ## 掉线报警、每日登录检查和诊断页面
@@ -142,7 +143,7 @@
 2. 复制它给的网址（比如 `https://hc-ping.com/……`），填进「心跳网址」，勾「开启掉线报警」，点「立即报一次平安」，监控服务那边显示收到就好了。
 3. 宽限时间是为了避免偶尔网络慢误报：超过「周期 + 宽限时间」都没收到心跳才会提醒。
 
-**每日登录检查**：每天定时在后台打开一次 Poshmark、Mercari、Depop 的待发货列表，跳到登录页就用「邮件」里的发件邮箱发一封提醒到「提醒发给」的邮箱（留空就只记录在诊断页面）。只看有没有登录，不点任何按钮、不改批次。一键拉取或远程指令正在运行时，会推迟 15 分钟再查。点「立即检查一次登录」可以马上试一次。前提是电脑开着、装好了邮件程序。
+**每日登录检查**：每天定时在后台打开一次 Poshmark、Mercari、Depop、Whatnot 的待发货列表，跳到登录页就用「邮件」里的发件邮箱发一封提醒到「提醒发给」的邮箱（留空就只记录在诊断页面）。只看有没有登录，不点任何按钮、不改批次。一键拉取或远程指令正在运行时，会推迟 15 分钟再查。点「立即检查一次登录」可以马上试一次。前提是电脑开着、装好了邮件程序。
 
 **诊断页面**：集中显示插件版本、邮件程序、各平台登录状态（每日检查或上次拉取，哪个新显示哪个）、心跳、远程指令、上次拉取的报错和面单抓取失败原因、批次里还缺面单的订单。遇到问题点「⬇ 导出诊断信息」或「复制诊断信息」发给开发者：里面的邮箱已打码，不含暗号、心跳网址的密钥、买家姓名和地址。
 
@@ -174,7 +175,7 @@
 
 ## 需要注意
 
-- **非官方工具**：和 Poshmark、Mercari、Depop 没有任何关系。它只是在你已经登录的 Chrome 里，替你打开你自己的卖家后台、读页面、点「下载面单」，节奏和人工操作差不多。各平台的服务条款对自动化工具有不同规定，请自己判断、自担风险；不要高频运行。
+- **非官方工具**：和 Poshmark、Mercari、Depop、Whatnot 没有任何关系。它只是在你已经登录的 Chrome 里，替你打开你自己的卖家后台、读页面、点「下载面单」，节奏和人工操作差不多。各平台的服务条款对自动化工具有不同规定，请自己判断、自担风险；不要高频运行。
 - **绝不替你花钱**：带 Buy / Purchase / Pay / Upgrade / QR 等字样的按钮一律不点，只下载已经买好的预付面单。
 - **页面会改版**：读取规则是按 2026 年 10 月的页面写的（Poshmark 订单页、Mercari 订单页 + 商品页、Depop sellinghub 列表）。平台改版后可能读不到，「发货 → ① 拉取订单」的「本次拉取情况 → 详细诊断」会列出页面结构，方便调整；列表页地址和订单链接规则也可以在「⚙ 发货设置」里改。
 - **数据只在本机**：订单、图片、面单存在这台电脑的 Chrome 里（chrome.storage + IndexedDB）；Gmail 应用专用密码只存在 macOS 钥匙串里；不上传到任何服务器。发货文件里不含买家姓名和地址（面单 PDF 本身除外）。

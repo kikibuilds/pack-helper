@@ -1,4 +1,4 @@
-// 发货：拉取 Poshmark / Mercari / Depop 待发货订单和面单 → 检查 → 打包下载或发邮件。
+// 发货：拉取 Poshmark / Mercari / Depop / Whatnot 待发货订单和面单 → 检查 → 打包下载或发邮件。
 // 界面在 batch.html 的 <section data-view="shipping">，逻辑在 batch.js。
 const fmt = (t) => new Date(t).toLocaleString('zh-CN', { hour12: false, month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 const key = (o) => `${o.platform}|${o.orderId || o.id}`;
@@ -7,7 +7,7 @@ export default {
   id: 'shipping',
   name: '发货',
   icon: '🚚',
-  desc: '拉取 Poshmark / Mercari / Depop 待发货订单和面单 → 检查 → 打包下载或发邮件给打包同事',
+  desc: '拉取 Poshmark / Mercari / Depop / Whatnot 待发货订单和面单 → 检查 → 打包下载或发邮件给打包同事',
   order: 10,
   core: true,
   view: 'shipping',

@@ -9,7 +9,7 @@
 - 员工最少需要的信息：每个包裹装哪些商品（图片 / 商品名 / SKU / 数量）和对应的面单。
 - 人不一定在电脑旁（甚至可能在国外），需要能远程启动、远程知道结果。
 
-范围（当前）：Poshmark、Mercari、Depop 这三个**平台出预付面单**的国内订单。
+范围（当前）：Poshmark、Mercari、Depop 这三个**平台出预付面单**的国内订单，加上 Whatnot（面单在 Whatnot 上生成，买家付运费）。
 
 ## 2. 整体架构
 
@@ -99,6 +99,13 @@
 - 「需要处理」复用 `lib/diag.js` 的状态计算（和诊断页同一套判断），不另写一套。
 - 关掉模块：`settings.modules.<id> = false`；后台 `scheduleRemotePolling` / `scheduleHeartbeat` / `scheduleLoginCheck` 用 `moduleOn()` 判断，设置变化时重新排定时任务。
 - 测试：Playwright 加载扩展，逐页检查路由、中英文（英文模式下扫一遍页面上残留的中文）、邮件设置保存、远程指令开启校验和定时任务、模块开关（定时任务清掉 / 恢复、首页卡片消失、地址回首页）、手动加订单后首页的「缺面单」提醒、`#run` 旧地址拉取后自动切到批次、私有模块的卡片 / 页面 / 往运行监控加子页面。
+
+### 阶段八：Whatnot（V0.8.0）
+- Whatnot 的特点：**每件商品是一个单独的订单**（Order #…），同一买家的多件会自动合进同一个包裹（Shipment #…），整个包裹最后生成一张面单。所以发货助手里「订单号」用包裹号，包裹里每件一行，共用一张面单（编号 W）。
+- 读取：Seller Hub → Shipments（`/dashboard/shipments`，状态选 All Statuses）。表格每行 `tr[data-testid="shipments-<base64>-row"]`，base64 解出来是 `ShipmentNode:<包裹号>`；状态在「Status」列（Needs Label / Delivered …）。逐个打开 `/dashboard/shipments/<base64>`，右边详情栏 `[data-testid="shipment-details-sidebar"]` 里每件商品 = 一个「Order #…」链接所在的区块（图片 alt 是完整标题）。先核对详情栏头部的 `#包裹号`，防止读错包裹。代码在 `lib/whatnot.js`。
+- SKU：① 标题方括号 ② 点「Generate Packing Slip」读 Attributes 里的「Fields」（slip 可能是弹窗、新标签页、网页生成的 PDF 或下载的 PDF，几种都试；PDF 用 `DecompressionStream` 解压内容流、按 ToUnicode 表读字）③ SKU 记忆。slip 被后台当成面单放进「待分配面单」的，读完清掉。
+- 面单：只下载已经生成好的（详情栏里的 Print / Download Label，范围只限详情栏，避免点到别的包裹）。「Generate Label」绝不点：生成后包裹不能再合并同一买家后来的订单，重量尺寸也需要人确认；Needs Label 的包裹标缺面单并写明原因。
+- 测试：用保存下来的两个真实 Shipments 页面（两件合包 + 单件）做本地模拟，slip 分别模拟成「网页生成 PDF 新开标签页」和「弹窗」，一个包裹改成已生成面单（Print Label 链接）。
 
 ## 4. 测试方法
 

@@ -419,7 +419,7 @@ $('#btnStop').addEventListener('click', () => {
 });
 
 // 下拉菜单：所有平台 / 只拉某一个平台（记住上次的选择）
-const scopeNames = { all: '所有平台', poshmark: 'Poshmark', mercari: 'Mercari', depop: 'Depop' };
+const scopeNames = { all: '所有平台', poshmark: 'Poshmark', mercari: 'Mercari', depop: 'Depop', whatnot: 'Whatnot' };
 try { const v = localStorage.getItem('runScope'); if (v && scopeNames[v]) $('#runScope').value = v; } catch { /* ignore */ }
 function updateRunLabel() {
   const v = $('#runScope').value;
@@ -433,7 +433,7 @@ async function startRun(scope) {
   const v = typeof scope === 'string' && scopeNames[scope] ? scope : $('#runScope').value;
   $('#runScope').value = v; updateRunLabel();
   const platforms = v === 'all' ? null : [v];
-  const what = v === 'all' ? 'Poshmark、Mercari、Depop' : scopeNames[v];
+  const what = v === 'all' ? 'Poshmark、Mercari、Depop、Whatnot' : scopeNames[v];
   if (!confirm(`将打开 ${what} 的待发货列表，把订单和面单拉到这个页面的表格里（不会自动打包）。\n检查无误后再点「打包下载」。\n运行期间请保持本页打开。开始吗？`)) return;
   setBusy(true, true);
   $('#runBox').hidden = false;
@@ -604,7 +604,7 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 // ===================== 远程指令（邮件触发） =====================
-const PNAME = { poshmark: 'Poshmark', mercari: 'Mercari', depop: 'Depop' };
+const PNAME = { poshmark: 'Poshmark', mercari: 'Mercari', depop: 'Depop', whatnot: 'Whatnot' };
 const fmtTime = (t) => new Date(t).toLocaleString('zh-CN', { hour12: false });
 
 async function renderRemote() {

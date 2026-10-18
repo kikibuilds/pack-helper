@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "发货助手 Pack Helper",
-  "version": "0.7.0",
-  "description": "从 Poshmark、Mercari、Depop 收集待发货订单和预付面单，生成带图片的拣货单 + 面单的发货文件 (.zip)。",
+  "version": "0.8.0",
+  "description": "从 Poshmark、Mercari、Depop、Whatnot 收集待发货订单和预付面单，生成带图片的拣货单 + 面单的发货文件 (.zip)。",
   "permissions": [
     "storage",
     "activeTab",
@@ -22,6 +22,7 @@
     "https://*.mercari.com/*",
     "https://*.mercdn.net/*",
     "https://*.depop.com/*",
+    "https://*.whatnot.com/*",
     "https://*/*"
   ],
   "background": {

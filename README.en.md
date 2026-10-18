@@ -2,7 +2,7 @@
 
 [中文说明](README.md)
 
-Pack Helper is for small resellers on **Poshmark, Mercari and Depop** who want someone else to do the picking and packing — without giving that person access to any selling account.
+Pack Helper is for small resellers on **Poshmark, Mercari, Depop and Whatnot** who want someone else to do the picking and packing — without giving that person access to any selling account.
 
 It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already signed into, lets you check everything in one table, and builds one shipping file per batch. An optional macOS mail helper emails the file to whoever packs, and can run the whole flow remotely when you email it a command.
 
@@ -20,7 +20,7 @@ The interface switches between Chinese and English with the **English / 中文**
 └── 面单/                  one label file per package (P01_Poshmark_….pdf, M01_…, D01_…)
 ```
 
-Package codes: **P** = Poshmark, **M** = Mercari, **D** = Depop, **X** = other. One code = one package = one label; several items in one order share a code. The packing list contains no buyer names or addresses.
+Package codes: **P** = Poshmark, **M** = Mercari, **D** = Depop, **W** = Whatnot, **X** = other. One code = one package = one label; several items in one order share a code. The packing list contains no buyer names or addresses.
 
 ## Install (about a minute)
 
@@ -55,7 +55,7 @@ Settings, recipients, the batch table and packed history live in Chrome and surv
 
 On the home page open **🚚 Shipping → ① Pull orders** and click **▶ Pull orders** (the drop-down next to it limits the pull to one platform). The extension:
 
-1. opens each platform's to-ship list (on Depop it clicks "To ship" first);
+1. opens each platform's to-ship list (on Depop it clicks "To ship" first; on Whatnot it opens Seller Hub → Shipments and skips delivered / shipped ones);
 2. reads each order — item name, photo, SKU, quantity, order number (Mercari also reads the item page for the full title; a SKU in square brackets at the end of a title is picked up automatically);
 3. downloads the prepaid label (it never clicks Buy / Purchase / Pay / Upgrade / QR — it only downloads labels that are already paid for);
 4. lists everything in the table. Nothing is packed automatically.
@@ -65,6 +65,7 @@ Keep the Pack Helper page open while it runs (you can switch to other pages; the
 - **No duplicates:** packed orders are remembered for 45 days. If a platform still lists one as to-ship, it is marked "Packed before" and left unticked. Click the × on the mark to clear it.
 - **Missing labels** show the reason and a link to the order page. Packages without a label stay in the batch and are flagged red on the packing list.
 - **Shipped orders** (e.g. Mercari "Awaiting rating from buyer") are skipped.
+- **Whatnot:** one Shipment (items from the same buyer that Whatnot bundles together) = one package, code W. The SKU comes from square brackets in the title, otherwise from the "Fields" line under Attributes on the packing slip. Only labels that were already generated are downloaded; shipments still showing "Needs Label" are flagged as missing a label — the extension **never clicks "Generate Label"**. Generate it in Whatnot (check weight and size), then pull again.
 
 ## Add an order by hand
 
@@ -114,7 +115,7 @@ Home page → **🩺 Monitoring**: "Offline alerts & sign-in check", "Remote com
 2. Paste the URL it gives you (e.g. `https://hc-ping.com/…`) into "Heartbeat URL", tick "Enable offline alerts", click "Ping now" and confirm the service received it.
 3. The grace time prevents false alarms from a brief slow connection: you are alerted only after period + grace with no ping.
 
-**Daily sign-in check**: once a day the extension opens the Poshmark, Mercari and Depop to-ship lists in the background; if one lands on a sign-in page it emails "Alert email to" from the sender under "Email" (leave it empty to only record the result on the diagnostics page). It only looks — no clicks, no batch changes — and waits 15 minutes if a pull or remote command is running. "Check sign-in now" runs it immediately. The computer must be on and the mail helper installed.
+**Daily sign-in check**: once a day the extension opens the Poshmark, Mercari, Depop and Whatnot to-ship lists in the background; if one lands on a sign-in page it emails "Alert email to" from the sender under "Email" (leave it empty to only record the result on the diagnostics page). It only looks — no clicks, no batch changes — and waits 15 minutes if a pull or remote command is running. "Check sign-in now" runs it immediately. The computer must be on and the mail helper installed.
 
 **Diagnostics page**: extension version, mail helper, each platform's sign-in status (from the daily check or the last pull, whichever is newer), heartbeat, remote commands, errors and label failures from the last pull, and orders still missing a label. When something goes wrong, click "⬇ Export diagnostics" or "Copy diagnostics" and send it to the developer: email addresses are masked; the passphrase, heartbeat URL key and buyer names/addresses are never included.
 
@@ -146,7 +147,7 @@ Everything depends on Chrome staying open on this computer with all three platfo
 
 ## Notes
 
-- **Unofficial.** Not affiliated with Poshmark, Mercari or Depop. It only opens your own seller pages in your own signed-in Chrome, at roughly human pace. Platform terms on automation differ — use your own judgment and don't run it at high frequency.
+- **Unofficial.** Not affiliated with Poshmark, Mercari, Depop or Whatnot. It only opens your own seller pages in your own signed-in Chrome, at roughly human pace. Platform terms on automation differ — use your own judgment and don't run it at high frequency.
 - **Pages change.** Reading rules match the pages as of October 2026. If a platform redesign breaks something, "This pull → Detailed diagnostics" under Shipping → ① Pull orders shows the page structure; list URLs and link patterns are editable under ⚙ Shipping settings.
 - **Local only.** Orders, images and labels stay in this Chrome (chrome.storage + IndexedDB); the Gmail app password stays in the Keychain; nothing is uploaded anywhere.
 - **Fixed extension ID.** The `key` in `manifest.json` pins the ID to `ohpffalnkclojleccgidgjnlggnpjfab`, which the mail helper trusts. If you fork it, remove `key` and set `EXT_ID` in `mailer/install.sh` to your own ID.
