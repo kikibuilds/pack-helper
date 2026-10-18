@@ -5,5 +5,3 @@ __pycache__/
 *.zip
 node_modules/
 
-# 自己的私有功能模块（单独的仓库），见 docs/MODULES.md
-modules-private/

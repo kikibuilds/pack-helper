@@ -9,11 +9,9 @@ const $ = (s) => document.querySelector(s);
 const $$ = (s) => [...document.querySelectorAll(s)];
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// 私有模块（不在公开仓库里）：有就加载，没有就跳过
+// 私有模块（modules-private/index.js，公开版里是空的）。单独加载：私有模块出错时首页照样能用，并在「需要处理」里提示
 let privateError = '';
-try { await import('../modules-private/index.js'); } catch (e) {
-  if (!/Failed to fetch|not found|Cannot find|Failed to resolve|error loading dynamically imported module/i.test(e.message)) privateError = e.message;
-}
+try { await import('../modules-private/index.js'); } catch (e) { privateError = e.message; }
 
 const LOCAL_KEYS = ['lastScan', 'lastRun', 'lastMail', 'remoteLastPoll', 'remoteLog', 'heartbeatLast', 'loginCheckLast', 'loginCheckLog', 'runStatus'];
 async function context() {
@@ -52,6 +50,9 @@ async function route() {
   const name = mod ? mod.name : PAGE_NAMES[view];
   $('#crumb').innerHTML = name ? `› <b>${esc(name)}</b>` : '';
   document.title = name ? `发货助手 · ${name}` : '发货助手';
+  if (mod && typeof mod.onShow === 'function') { try { mod.onShow(sub); } catch { /* ignore */ } }
+  const extra = paneHooks.get(`${view}/${sub}`);
+  if (extra) { try { extra(); } catch { /* ignore */ } }
   if (view === 'home') renderHome();
   if (view === 'settings' && sub === 'modules') renderModuleList();
   if (view === 'monitor' && sub === 'diag') renderDiagStatus();
@@ -61,6 +62,7 @@ function viewEl(view) { return document.querySelector(`section.view[data-view="$
 window.addEventListener('hashchange', route);
 
 // ===================== 自己画界面的模块 =====================
+const paneHooks = new Map(); // 「页面/子页面」→ 子页面每次显示时调用的 onShow
 function mountModules() {
   for (const m of listModules()) {
     if (m.view || typeof m.mount !== 'function' || viewEl(m.id)) continue;
@@ -84,6 +86,7 @@ function mountModules() {
       pane.className = 'pane panel'; pane.dataset.pane = p.id; pane.dataset.module = m.id;
       (host.querySelector('.layout > div:last-child') || host).append(pane);
       try { p.mount(pane); } catch (e) { pane.innerHTML = `<div class="note warn">加载出错：${esc(e.message)}</div>`; }
+      if (typeof p.onShow === 'function') paneHooks.set(`${p.view}/${p.id}`, () => p.onShow(pane));
     }
   }
 }

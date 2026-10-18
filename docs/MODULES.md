@@ -14,8 +14,9 @@ pack-helper/
 │   ├─ shipping/       🚚 发货（必备）
 │   ├─ remote/         📨 远程指令
 │   └─ monitor/        🩺 运行监控
-└─ modules-private/    你自己的模块（已在 .gitignore 里，不会进公开仓库）
-    └─ index.js        私有模块清单（有就加载，没有就跳过）
+└─ modules-private/    你自己的模块（公开版里只有两个空文件）
+    ├─ index.js        页面部分的清单
+    └─ background.js   后台部分（定时任务、消息）的清单
 ```
 
 ## 写一个模块
@@ -51,7 +52,7 @@ export default {
 };
 ```
 
-然后在 `modules-private/index.js` 里登记：
+然后在 `modules-private/index.js` 里登记（这个文件公开版里是空的，直接改）：
 
 ```js
 import { registerModule } from '../core/registry.js';
@@ -83,19 +84,58 @@ registerModule(hello);
 
 「功能管理」里关掉后：首页卡片和「需要处理」不再显示它，地址 `#/<id>` 会回到首页，设置里记 `settings.modules.<id> = false`。内置的远程指令、运行监控关掉时，后台的定时任务（查收件箱、心跳、登录检查）也会停（`lib/remote.js`、`lib/health.js` 里用 `moduleOn()` 判断）。
 
+## 后台部分（定时任务）
+
+需要在后台定时运行的（比如每 30 分钟同步一次），另写一个 `background.js`，登记到 `modules-private/background.js`：
+
+```js
+// modules-private/hello/background.js
+import { getSettings } from '../../lib/store.js';
+
+export default {
+  id: 'hello',                                   // 和页面部分的 id 一样
+  alarms: { helloTick: (alarm) => doWork() },    // 定时器名字 → 要做的事
+  messages: { helloNow: (msg) => doWork() },     // 页面里 chrome.runtime.sendMessage({ type: 'helloNow' }) → 返回值回给页面
+  async schedule() {                             // 按设置排定时器（开机、改设置、功能管理里打开时调用）
+    const s = await getSettings();
+    await chrome.alarms.clear('helloTick');
+    if (s.hello && s.hello.enabled) await chrome.alarms.create('helloTick', { periodInMinutes: 30 });
+  },
+  watch: (oldS, newS) => JSON.stringify(oldS.hello) !== JSON.stringify(newS.hello), // 哪些设置变了要重新排
+};
+```
+
+```js
+// modules-private/background.js
+import hello from './hello/background.js';
+export default [hello];
+```
+
+在「功能管理」里关掉这个模块时，外壳会自动清掉它 `alarms` 里的定时器，也不会再调用它的 `alarms` / `messages`。
+
+### 中英文
+
+模块自己的文字，用 `addTranslations` 补英文对照（`lib/i18n.js`）：
+
+```js
+import { addTranslations } from '../../lib/i18n.js';
+addTranslations({ '示例记录': 'Demo log' }, [[/^同步了 (\d+) 单$/, 'Synced $1 orders']]);
+```
+
+子页面（`panes`）和模块页面每次显示时，如果写了 `onShow`，会被调用一次，可以用来刷新内容。
+
 ## 目前的限制
 
-- **后台定时任务**：私有模块现在只能做「页面里」的事。需要在后台定时运行（`chrome.alarms`）的私有模块，还要在 `background.js` 里加几行，以后会做成模块自己登记。
 - **不能从网上安装**：Chrome 不允许扩展从网上下载代码来运行（Manifest V3 的安全规定），所以「安装」一个模块 = 把它的文件夹放进插件目录（复制，或者 `git pull`），再在 `chrome://extensions` 重新加载。
-- 插件没有 `modules-private/` 时，Chrome 控制台会有一行「Failed to load resource」，是正常的（外壳在试着加载私有模块）。
+- 模块加载出错时，首页「需要处理」会提示「私有模块加载出错」，其他功能照常能用。
 
 ## 私有模块怎么和公开版一起用
 
-公开版放在 `~/pack-helper`（`git clone` 公开仓库）。私有模块单独放一个仓库，克隆到 `~/pack-helper/modules-private/`：
+做一个私有仓库，内容 = 公开版 + 你在 `modules-private/` 里加的东西（再在 `manifest.json` 里加一行 `"version_name": "x.y.z-private"`，各处显示的版本号就能和公开版区分）。因为私有的东西都只在 `modules-private/` 里，公开版更新时直接合并，不会冲突：
 
 ```bash
-cd ~/pack-helper
-git clone https://github.com/<你>/<私有模块仓库>.git modules-private
+cd ~/pack-helper-private
+git remote add upstream https://github.com/kikibuilds/pack-helper.git   # 只需要做一次
+git pull upstream main                                                  # 拿公开版的更新
+git push
 ```
-
-两边各自 `git pull` 更新，互不冲突：公开仓库忽略 `modules-private/`，私有仓库里只有你自己的模块。

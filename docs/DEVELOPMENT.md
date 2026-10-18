@@ -95,7 +95,7 @@
 ### 阶段七：首页和功能模块（V0.7.0）
 - 问题：批次页越来越长，拉取、批次表格和十几项设置挤在一页；而且自己定制的功能（比如售出同步）要改好几个共用文件，公开版一更新就要合并冲突。
 - 做法：仍然是**同一个页面**（`batch.html`），所有按钮和输入框的 id 不变，`batch.js` 里的业务逻辑基本没动，只在外面加一层外壳 `core/shell.js`：按地址（`#/shipping/pull`、`#/settings/mail`……）切换显示哪一块。这样拉取、打包、远程指令这些已经在真实平台上跑稳的流程不受影响。旧地址 `#run`、`#remote`（远程指令、一键拉取自动打开）照旧可用，显示在「发货 → 拉取订单」。
-- 模块：`core/registry.js` 登记模块说明（名称、图标、简介、`status()`、`todos()`、`mount()`、`panes`），首页卡片、「需要处理」、功能管理都由它生成；内置三个模块在 `modules/`。私有模块放 `modules-private/index.js`（gitignore），外壳用动态 `import()` 试着加载，没有就跳过。
+- 模块：`core/registry.js` 登记模块说明（名称、图标、简介、`status()`、`todos()`、`mount()`、`panes`），首页卡片、「需要处理」、功能管理都由它生成；内置三个模块在 `modules/`。私有模块放 `modules-private/`：公开版里只有两个空清单（`index.js` 页面部分、`background.js` 后台部分），私有仓库 = 公开版 + 这个文件夹里的东西，合并公开版更新不会冲突。外壳单独 `import()` 私有清单，出错时首页照样能用并提示。后台部分登记 `{ id, alarms, messages, schedule, watch }`，`background.js` 统一分发，模块被关掉时清掉它的定时器。
 - 「需要处理」复用 `lib/diag.js` 的状态计算（和诊断页同一套判断），不另写一套。
 - 关掉模块：`settings.modules.<id> = false`；后台 `scheduleRemotePolling` / `scheduleHeartbeat` / `scheduleLoginCheck` 用 `moduleOn()` 判断，设置变化时重新排定时任务。
 - 测试：Playwright 加载扩展，逐页检查路由、中英文（英文模式下扫一遍页面上残留的中文）、邮件设置保存、远程指令开启校验和定时任务、模块开关（定时任务清掉 / 恢复、首页卡片消失、地址回首页）、手动加订单后首页的「缺面单」提醒、`#run` 旧地址拉取后自动切到批次、私有模块的卡片 / 页面 / 往运行监控加子页面。

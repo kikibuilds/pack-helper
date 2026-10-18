@@ -1,8 +1,39 @@
 // 后台：① 截获平台面单 PDF 下载 ② 批量扫描列表页里的订单
 import { extractOrderFromPage } from './lib/extract.js';
-import { addOrder, addToPool, autoAssign, detectPlatform, getSettings, getOrders, isPdfBytes } from './lib/store.js';
+import { addOrder, addToPool, autoAssign, detectPlatform, getSettings, getOrders, isPdfBytes, moduleOn } from './lib/store.js';
 import { pollOnce, scheduleRemotePolling } from './lib/remote.js';
 import { beatOnce, scheduleHeartbeat, loginCheckOnce, scheduleLoginCheck } from './lib/health.js';
+import privateHooks from './modules-private/background.js';
+
+// ④ 私有模块的后台部分（modules-private/background.js，公开版里是空的），写法见 docs/MODULES.md：
+//    { id, alarms: { 名字: (alarm) => … }, messages: { type: (msg) => Promise }, schedule: async () => …,
+//      watch: (旧设置, 新设置) => true 表示要重新排定时任务 }
+//    模块在「功能管理」里被关掉时，它的定时任务会被清掉，alarms / messages 也不会再被调用。
+const hooks = Array.isArray(privateHooks) ? privateHooks.filter((h) => h && h.id) : [];
+async function scheduleHook(h) {
+  try {
+    const s = await getSettings();
+    if (!moduleOn(s, h.id)) { for (const name of Object.keys(h.alarms || {})) await chrome.alarms.clear(name); return; }
+    if (typeof h.schedule === 'function') await h.schedule();
+  } catch (e) { console.warn(`module ${h.id} schedule`, e); }
+}
+const scheduleHooks = () => Promise.all(hooks.map(scheduleHook));
+chrome.alarms.onAlarm.addListener(async (a) => {
+  for (const h of hooks) {
+    const fn = h.alarms && h.alarms[a.name];
+    if (!fn) continue;
+    if (!moduleOn(await getSettings(), h.id)) continue;
+    Promise.resolve().then(() => fn(a)).catch((e) => console.warn(`module ${h.id} alarm`, e));
+  }
+});
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  for (const h of hooks) {
+    const fn = msg && h.messages && h.messages[msg.type];
+    if (!fn) continue;
+    Promise.resolve().then(() => fn(msg)).then(sendResponse, (e) => sendResponse({ ok: false, error: e.message }));
+    return true;
+  }
+});
 
 // ③ 远程指令：定时查收件箱（设置里开启后）
 chrome.alarms.onAlarm.addListener((a) => {
@@ -10,12 +41,16 @@ chrome.alarms.onAlarm.addListener((a) => {
   if (a.name === 'heartbeat') beatOnce('alarm').catch((e) => console.warn('heartbeat', e));
   if (a.name === 'loginCheck' || a.name === 'loginCheckRetry') loginCheckOnce('alarm').catch((e) => console.warn('login check', e));
 });
-chrome.runtime.onStartup.addListener(() => { scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck(); });
+chrome.runtime.onStartup.addListener(() => { scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck(); scheduleHooks(); });
 chrome.storage.onChanged.addListener((changes) => {
   if (!changes.settings) return;
   // 「设置 → 功能管理」里开关了某个模块：重新排它的定时任务（关掉的会被清掉）
   if (JSON.stringify((changes.settings.oldValue || {}).modules || {}) !== JSON.stringify((changes.settings.newValue || {}).modules || {})) {
-    scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck();
+    scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck(); scheduleHooks();
+  } else {
+    for (const h of hooks) {
+      try { if (typeof h.watch === 'function' && h.watch(changes.settings.oldValue || {}, changes.settings.newValue || {})) scheduleHook(h); } catch { /* ignore */ }
+    }
   }
   const o = (changes.settings.oldValue || {}).remote || {};
   const n = (changes.settings.newValue || {}).remote || {};
@@ -57,6 +92,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   scheduleRemotePolling();
   scheduleHeartbeat();
   scheduleLoginCheck();
+  scheduleHooks();
   const orders = await getOrders();
   chrome.action.setBadgeText({ text: orders.length ? String(orders.length) : '' });
   chrome.action.setBadgeBackgroundColor({ color: '#2563eb' });

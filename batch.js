@@ -1015,7 +1015,7 @@ $('#btnLang').addEventListener('click', () => { setLang(getLang() === 'en' ? 'zh
   await renderLastRun();
   await renderScanSummary();
   await renderEmails();
-  $('#ver').textContent = `V${chrome.runtime.getManifest().version}`;
+  $('#ver').textContent = `V${(chrome.runtime.getManifest().version_name || chrome.runtime.getManifest().version)}`;
   // 带 #run（所有平台）或 #run=depop（只拉一个平台）打开时直接开始拉取
   await renderRemote();
   await renderHealth();
