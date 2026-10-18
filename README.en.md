@@ -16,6 +16,8 @@ The interface switches between Chinese and English with the **English / 中文**
 ├── 打包清单.csv           same content for Google Sheets / Excel
 ├── 打印-面单带对照卡.pdf   print this: before each label, a same-size text card
 │                          (big package code + SKU + qty + item name)
+├── 打印-packing slip（缺面单）.pdf   only when some packages have no label yet: one card
+│                          per such package in the same format, so the packer can pick and bag first
 ├── 使用说明.txt           step-by-step instructions for the packer
 └── 面单/                  one label file per package (P01_Poshmark_….pdf, M01_…, D01_…)
 ```
@@ -63,9 +65,9 @@ On the home page open **🚚 Shipping → ① Pull orders** and click **▶ Pull
 Keep the Pack Helper page open while it runs (you can switch to other pages; the top bar shows progress). A clean pull switches to **② Batch & pack** by itself; if there were problems it stays on the pull tab so you see "This pull" first. Check the table — edit names, SKUs, quantities, drag in missing labels — then tick what to ship and click **⬇ Pack & download** or **✉ Pack & email**.
 
 - **No duplicates:** packed orders are remembered for 45 days. If a platform still lists one as to-ship, it is marked "Packed before" and left unticked. Click the × on the mark to clear it.
-- **Missing labels** show the reason and a link to the order page. Packages without a label stay in the batch and are flagged red on the packing list.
+- **Missing labels** show the reason and a link to the order page. Packages without a label stay in the batch and are flagged red on the packing list. The zip also has "打印-packing slip（缺面单）.pdf": one card per package without a label, in the same format as the lookup card (code, order #, SKU × qty, item name; for Whatnot each item also shows its own Order #). The packer can pick and bag first and write the code on the bag; once you add the label and pull again, it goes into the next zip.
 - **Shipped orders** (e.g. Mercari "Awaiting rating from buyer") are skipped.
-- **Whatnot:** one Shipment (items from the same buyer that Whatnot bundles together) = one package, code W. The SKU comes from square brackets in the title, otherwise from the "Fields" line under Attributes on the packing slip. Only labels that were already generated are downloaded; shipments still showing "Needs Label" are flagged as missing a label — the extension **never clicks "Generate Label"**. Generate it in Whatnot (check weight and size), then pull again.
+- **Whatnot:** every item is its own order (Order #); items from the same buyer are bundled into one Shipment = one package, code W. Generate the label in Whatnot yourself (check weight and size); the extension only downloads labels that already exist ("Ready to Ship", button "Print Shipping Label"). That PDF starts with Whatnot's packing slip and ends with the label — the extension splits it so only the label page is printed. Shipments still showing "Needs Label" are flagged as missing a label; the extension **never clicks "Generate Label"**, "Generate New Label" or "Mark Package as Shipped". The SKU comes from square brackets in the title, otherwise from the "SKU" line on the packing slip (taken from the label PDF, or via "Generate Packing Slip" when there is no label yet), matched to each item by order number. Whatnot's own packing slip is only read for SKUs and never put in the zip (it shows prices and addresses).
 
 ## Add an order by hand
 
