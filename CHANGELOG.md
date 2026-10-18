@@ -2,6 +2,11 @@
 
 标「需要重新运行 install.sh」的版本改了 Mac 上的邮件程序，其余版本只要替换文件夹、在 `chrome://extensions` 点 ↻ 重新加载。
 
+## V0.8.1 — Whatnot packing slip 修正
+- 修好读 Whatnot packing slip 时文字乱码：slip 的 PDF 用了好几种字体，以前把它们的字形对照表混在一起用，除了地址那几行其余都读错。现在每种字体用自己的对照表。
+- 按真实的 slip 格式读 SKU：Attributes 一栏每件商品写「Order 订单号」和「SKU …」，按 Whatnot 订单号对应到每件商品。
+- 读不到 SKU 时的提醒不再附上 slip 的内容（里面有收件人姓名和地址）。
+
 ## V0.8.0 — 支持 Whatnot
 - 「一键拉取订单」加上 **Whatnot**（下拉菜单里也可以「只拉 Whatnot」）。打开 Seller Hub → Shipments，逐个打开还没寄出的包裹（Shipment），读每件商品的标题、图片、Whatnot 订单号。
   - Whatnot 每件商品是一个单独的订单，同一买家的多件会自动合进同一个包裹、共用一张面单：发货助手里**一个 Shipment = 一个包裹**（编号 W 开头），订单号一栏显示包裹号（Shipment #），每件商品一行。
