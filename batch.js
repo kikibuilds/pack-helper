@@ -343,15 +343,15 @@ $('#btnZip').addEventListener('click', () => doPack());
 $('#btnMail').addEventListener('click', async () => {
   const to = $('#mailTo').value;
   if (!to) {
-    alert('还没有收件人。请在页面下方「设置 → 邮件收件人」里添加邮箱。');
-    $('#settings').open = true;
+    alert('还没有收件人。请到「设置 → 邮件账号」里添加邮箱。');
+    location.hash = '#/settings/mail';
     $('#emailList').focus();
     return;
   }
   const st = await getSettings();
   if (!st.emailFrom) {
-    alert('还没有发件邮箱。请在页面下方「设置 → 邮件」里填写。');
-    $('#settings').open = true;
+    alert('还没有发件邮箱。请到「设置 → 邮件账号」里填写。');
+    location.hash = '#/settings/mail';
     $('#emailFrom').focus();
     return;
   }
@@ -438,6 +438,7 @@ async function startRun(scope) {
   setBusy(true, true);
   $('#runBox').hidden = false;
   $('#note').hidden = true;
+  let goBatch = false; // 拉取顺利结束就自动切到「② 批次与打包」；有问题留在拉取页，先看「本次拉取情况」
   const onProgress = (msg) => { if (!$('#btnStop').disabled) $('#runMsg').textContent = msg; };
   try {
     let res;
@@ -456,8 +457,9 @@ async function startRun(scope) {
       showNote('已停止。已经读取的订单保留在下方表格里；检查后可以直接点「打包下载」。', true);
     } else {
       const bad = res.missing || res.problems;
-      if (!res.packages) { showNote(`拉取完成：没有需要打包的新订单${res.problems ? `（${res.problems} 个问题见下方「本次拉取情况」）` : ''}。之前打包过的订单在表格里标「已打包」、不勾选。`, !!res.problems); return; }
-      showNote(`拉取完成：勾选了 ${res.packages} 个包裹${res.missing ? `，其中 ${res.missing} 个缺面单` : '，面单齐全'}${res.problems ? `，${res.problems} 个问题见下方「本次拉取情况」` : ''}。请检查下面的表格，确认后点「⬇ 打包下载」。`, !!bad);
+      goBatch = !res.problems;
+      if (!res.packages) { showNote(`拉取完成：没有需要打包的新订单${res.problems ? `（${res.problems} 个问题见「① 拉取订单」页）` : ''}。之前打包过的订单在表格里标「已打包」、不勾选。`, !!res.problems); return; }
+      showNote(`拉取完成：勾选了 ${res.packages} 个包裹${res.missing ? `，其中 ${res.missing} 个缺面单` : '，面单齐全'}${res.problems ? `，${res.problems} 个问题见「① 拉取订单」页` : ''}。请检查下面的表格，确认后点「⬇ 打包下载」。`, !!bad);
     }
   } catch (e) {
     showNote(`运行中断：${e.message}`, true);
@@ -467,6 +469,7 @@ async function startRun(scope) {
     await render();
     await renderLastRun();
     await renderScanSummary();
+    if (goBatch && /^#\/shipping\/pull/.test(location.hash)) location.hash = '#/shipping/batch';
   }
 }
 $('#btnRun').addEventListener('click', () => startRun());
@@ -527,6 +530,8 @@ function showNote(msg, warn = false) {
   $('#note').hidden = false;
   $('#note').className = warn ? 'note warn' : 'note';
   $('#note').textContent = msg;
+  const top = $('#note').getBoundingClientRect().top;
+  if (top < 60 || top > window.innerHeight - 40) window.scrollTo({ top: Math.max(0, window.scrollY + top - 80), behavior: 'smooth' });
 }
 
 // —— 设置 ——
@@ -613,7 +618,7 @@ async function renderRemote() {
   const list = s.emailTo || [];
   $('#remoteSendTo').innerHTML = (list.length
     ? list.map((a) => `<option value="${esc(a)}">${esc(a)}</option>`).join('') + (list.length > 1 ? '<option value="__all__">以上全部收件人</option>' : '')
-    : '<option value="">（先在上面「邮件」里添加收件人）</option>');
+    : '<option value="">（先在「设置 → 邮件账号」里添加收件人）</option>');
   if (r.sendTo && [...$('#remoteSendTo').options].some((o) => o.value === r.sendTo)) $('#remoteSendTo').value = r.sendTo;
   renderRemoteHelp();
   await renderRemoteLog();
@@ -661,10 +666,10 @@ async function saveRemote() {
   if (bad.length) { alert(`这些不是有效的邮箱：${bad.join('、')}`); return false; }
   if (enabled) {
     const missing = [];
-    if (!s.emailFrom || !EMAIL_RE.test(s.emailFrom)) missing.push('· 上面「邮件」里的发件邮箱（填好后点「保存邮件设置」）');
+    if (!s.emailFrom || !EMAIL_RE.test(s.emailFrom)) missing.push('· 「设置 → 邮件账号」里的发件邮箱（填好后点「保存邮件设置」）');
     if (!allow.length) missing.push('· 允许的邮箱（至少一个）');
     if (secret.length < 4) missing.push('· 暗号（至少 4 个字，可以点「随机生成」）');
-    if (!sendTo) missing.push('· 打包后发给（先在上面「邮件」里添加收件人并保存，再在这里选）');
+    if (!sendTo) missing.push('· 打包后发给（先在「设置 → 邮件账号」里添加收件人并保存，再在这里选）');
     if (missing.length) { alert(`还不能开启远程指令，下面这些没填好：\n\n${missing.join('\n')}`); return false; }
     // 纯字母 / 纯中文、又比较短的暗号，很容易在普通邮件标题里碰巧出现（比如 SHIP 会匹配 Shipping、Shipped）
     if (/^([a-z]+|[一-鿿]+)$/i.test(secret) && secret.length < 8
@@ -721,7 +726,7 @@ async function saveHealth() {
   const missing = [];
   if (heartbeatEnabled && !validHeartbeatUrl(heartbeatUrl)) missing.push('· 心跳网址：监控服务给的网址，以 https:// 开头');
   if (loginCheckNotify && !EMAIL_RE.test(loginCheckNotify)) missing.push('· 提醒发给：不是有效的邮箱');
-  if (loginCheckEnabled && loginCheckNotify && (!s.emailFrom || !EMAIL_RE.test(s.emailFrom))) missing.push('· 上面「邮件」里的发件邮箱（提醒邮件要用它发；填好后点「保存邮件设置」）');
+  if (loginCheckEnabled && loginCheckNotify && (!s.emailFrom || !EMAIL_RE.test(s.emailFrom))) missing.push('· 「设置 → 邮件账号」里的发件邮箱（提醒邮件要用它发；填好后点「保存邮件设置」）');
   if (missing.length) { alert(`还不能保存，下面这些没填好：\n\n${missing.join('\n')}`); return false; }
   await saveSettings({ ...s, health: { ...s.health, heartbeatEnabled, heartbeatUrl, heartbeatMin: Number($('#hbMin').value) || 5, loginCheckEnabled, loginCheckTime: $('#lcTime').value || '08:00', loginCheckNotify } });
   await renderHealth();
@@ -875,7 +880,7 @@ async function runRemoteJob(job) {
   }
   const to = s.remote.sendTo === '__all__' ? (s.emailTo || []) : (s.emailTo || []).filter((a) => a === s.remote.sendTo);
   if (!to.length) {
-    return { ok: false, short: '没有设置打包后发给谁', text: `可以打包 ${readyPk} 个包裹，但设置里没有选「打包后发给」谁，所以没有打包。请用远程桌面到批次页「设置 → 远程指令」里选好收件人。` };
+    return { ok: false, short: '没有设置打包后发给谁', text: `可以打包 ${readyPk} 个包裹，但设置里没有选「打包后发给」谁，所以没有打包。请用远程桌面到发货助手「远程指令」页选好收件人。` };
   }
   const pk = await exportPackage({
     orders: ready, trigger: '远程指令（邮件）',
@@ -1016,13 +1021,13 @@ $('#btnLang').addEventListener('click', () => { setLang(getLang() === 'en' ? 'zh
   await renderHealth();
   await renderManualPkgs();
   if (location.hash === '#remote') {
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', `${location.pathname}#/shipping/pull`);
     runRemoteJobs();
     return;
   }
   const m = location.hash.match(/^#run(?:=(\w+))?$/);
   if (m) {
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', `${location.pathname}#/shipping/pull`);
     startRun(m[1] || 'all');
   }
   const { scanStatus } = await chrome.storage.local.get('scanStatus');

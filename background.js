@@ -13,6 +13,10 @@ chrome.alarms.onAlarm.addListener((a) => {
 chrome.runtime.onStartup.addListener(() => { scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck(); });
 chrome.storage.onChanged.addListener((changes) => {
   if (!changes.settings) return;
+  // 「设置 → 功能管理」里开关了某个模块：重新排它的定时任务（关掉的会被清掉）
+  if (JSON.stringify((changes.settings.oldValue || {}).modules || {}) !== JSON.stringify((changes.settings.newValue || {}).modules || {})) {
+    scheduleRemotePolling(); scheduleHeartbeat(); scheduleLoginCheck();
+  }
   const o = (changes.settings.oldValue || {}).remote || {};
   const n = (changes.settings.newValue || {}).remote || {};
   if (o.enabled !== n.enabled || o.intervalMin !== n.intervalMin) scheduleRemotePolling();
@@ -36,11 +40,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-// 点插件图标：直接打开批次页（已经开着就切过去）
+// 点插件图标：打开发货助手首页（已经开着就切过去）
 chrome.action.onClicked.addListener(async () => {
   const url = chrome.runtime.getURL('batch.html');
   const [tab] = await chrome.tabs.query({ url: `${url}*` });
   if (tab && !/#remote/.test(tab.url || '')) {
+    // 只切过去，不改地址：页面可能正在拉取订单，改地址有重新加载的风险
     await chrome.tabs.update(tab.id, { active: true });
     await chrome.windows.update(tab.windowId, { focused: true });
   } else {

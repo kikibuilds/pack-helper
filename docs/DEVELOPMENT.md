@@ -92,6 +92,14 @@
 - **诊断页面** `diag.html`：只读已有的记录（`lastScan`、`lastRun`、`lastMail`、`remoteLastPoll`、`remoteLog`、批次里缺面单的订单）和新的 `heartbeatLast` / `loginCheckLog`，整理逻辑在纯函数 `lib/diag.js`。导出前邮箱打码、心跳网址只留路径前 4 位，暗号不导出。导出用 `chrome.downloads`（`<a download>` 配中文文件名在部分环境会变成「download」）。
 - 测试：Playwright + 本地 HTTPS 模拟平台（Poshmark 跳登录页）和心跳服务；邮件程序按真实方式注册成 Native Messaging host（`<user-data-dir>/NativeMessagingHosts/`），用 `PACKHELPER_FAKE_SMTP` 把邮件存成 .eml 核对。Linux 无头 Chromium 要设 `LANG=C.UTF-8`，否则 `chrome.downloads` 拒绝中文文件名。
 
+### 阶段七：首页和功能模块（V0.7.0）
+- 问题：批次页越来越长，拉取、批次表格和十几项设置挤在一页；而且自己定制的功能（比如售出同步）要改好几个共用文件，公开版一更新就要合并冲突。
+- 做法：仍然是**同一个页面**（`batch.html`），所有按钮和输入框的 id 不变，`batch.js` 里的业务逻辑基本没动，只在外面加一层外壳 `core/shell.js`：按地址（`#/shipping/pull`、`#/settings/mail`……）切换显示哪一块。这样拉取、打包、远程指令这些已经在真实平台上跑稳的流程不受影响。旧地址 `#run`、`#remote`（远程指令、一键拉取自动打开）照旧可用，显示在「发货 → 拉取订单」。
+- 模块：`core/registry.js` 登记模块说明（名称、图标、简介、`status()`、`todos()`、`mount()`、`panes`），首页卡片、「需要处理」、功能管理都由它生成；内置三个模块在 `modules/`。私有模块放 `modules-private/index.js`（gitignore），外壳用动态 `import()` 试着加载，没有就跳过。
+- 「需要处理」复用 `lib/diag.js` 的状态计算（和诊断页同一套判断），不另写一套。
+- 关掉模块：`settings.modules.<id> = false`；后台 `scheduleRemotePolling` / `scheduleHeartbeat` / `scheduleLoginCheck` 用 `moduleOn()` 判断，设置变化时重新排定时任务。
+- 测试：Playwright 加载扩展，逐页检查路由、中英文（英文模式下扫一遍页面上残留的中文）、邮件设置保存、远程指令开启校验和定时任务、模块开关（定时任务清掉 / 恢复、首页卡片消失、地址回首页）、手动加订单后首页的「缺面单」提醒、`#run` 旧地址拉取后自动切到批次、私有模块的卡片 / 页面 / 往运行监控加子页面。
+
 ## 4. 测试方法
 
 所有功能都在本地用 Playwright + 真实 Chromium（加载扩展）+ 本地 HTTPS 模拟服务器（`--host-resolver-rules` 把平台域名指到本机）做端到端测试：模拟 Poshmark 订单页和下载弹窗、Depop 列表和 blob 下载、Mercari 订单页 / 商品页；邮件程序用 `PACKHELPER_FAKE_SMTP`（把邮件存成 .eml）和 `PACKHELPER_FAKE_IMAP`（目录里的 .eml 当收件箱）测试，不会真的发信。真实平台上的效果以实际拉取为准。

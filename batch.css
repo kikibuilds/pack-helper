@@ -116,3 +116,95 @@ td.inc input { width: 18px; height: 18px; }
 #scanSummary li { margin: 2px 0; }
 #scanSummary .bad { color: #b91c1c; }
 #scanSummary pre { white-space: pre-wrap; font-size: 12px; color: #374151; background: #f9fafb; padding: 8px; border-radius: 6px; }
+
+/* ===================== 外壳：顶栏、首页、页面切换（V0.7） ===================== */
+body.app { padding: 0; }
+body.app main { padding: 18px 24px 48px; max-width: 1240px; }
+.topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 10px 24px; background: #fff; border-bottom: 1px solid #e5e7eb; }
+.topbar .brand { font-weight: 700; font-size: 17px; color: #111; text-decoration: none; white-space: nowrap; }
+.topbar .crumb { color: #6b7280; white-space: nowrap; }
+.topbar .crumb b { color: #111; }
+.topbar .toplink { font-size: 13px; color: #374151; text-decoration: none; border: 1px solid #d1d5db; border-radius: 6px; padding: 5px 10px; white-space: nowrap; }
+.topbar .toplink:hover { background: #f3f4f6; }
+.pill { font-size: 12px; border-radius: 999px; padding: 3px 10px; background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; text-decoration: none; white-space: nowrap; max-width: 380px; overflow: hidden; text-overflow: ellipsis; }
+
+section.view { display: none; }
+section.view.on { display: block; }
+.pane { display: none; }
+.pane.on { display: block; }
+body.app h2 { font-size: 15px; margin: 20px 0 10px; }
+body.app h3 { margin-top: 4px; }
+.panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 18px; margin: 0 0 14px; }
+.panel > h3:not(:first-child) { margin-top: 22px; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 10px 0; }
+.row.gap { margin-top: 4px; }
+.toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0 0 12px; }
+.toolbar .check { margin: 0; }
+.btnlink { display: inline-block; text-decoration: none; border: 1px solid #d1d5db; background: #fff; color: #111; border-radius: 6px; padding: 7px 14px; font-weight: 600; }
+.btnlink.primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+.btnlink:hover { filter: brightness(.97); }
+
+/* 顶部标签（发货：拉取 / 批次 / 设置） */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid #e5e7eb; margin: 0 0 16px; }
+.tabs a { padding: 9px 14px; font-weight: 600; color: #6b7280; text-decoration: none; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tabs a.on { color: #2563eb; border-bottom-color: #2563eb; }
+.tabs .count { font-size: 12px; color: #6b7280; font-weight: 500; }
+
+/* 左侧导航（运行监控、设置） */
+.layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 18px; align-items: start; }
+.side { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 64px; }
+.side a { padding: 8px 12px; border-radius: 8px; color: #374151; font-weight: 600; text-decoration: none; }
+.side a:hover { background: #f3f4f6; }
+.side a.on { background: #eff6ff; color: #1d4ed8; }
+@media (max-width: 760px) { .layout { grid-template-columns: 1fr; } .side { flex-direction: row; flex-wrap: wrap; position: static; } }
+
+/* 首页：需要处理 + 功能卡片 */
+.todos { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.todo { display: block; background: #fff; border: 1px solid #e5e7eb; border-left: 4px solid #d1d5db; border-radius: 10px; padding: 10px 12px; text-decoration: none; color: #111; }
+.todo b { display: block; font-size: 13px; }
+.todo span { font-size: 12px; color: #6b7280; display: block; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.todo.bad { border-left-color: #dc2626; }
+.todo.warn { border-left-color: #f59e0b; }
+.todo.ok { border-left-color: #10b981; }
+.todo.ok b { color: #047857; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+.card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 6px; min-height: 132px; color: #111; text-decoration: none; }
+.card:hover { border-color: #93c5fd; box-shadow: 0 1px 6px rgba(37, 99, 235, .08); }
+.card .h { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+.card .ic { font-size: 20px; }
+.card .st { margin-top: auto; font-size: 12px; display: flex; gap: 6px; align-items: center; color: #374151; }
+.card.main { border: 2px solid #2563eb; }
+.card.soon { border-style: dashed; color: #6b7280; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; background: #d1d5db; }
+.dot.ok { background: #10b981; }
+.dot.warn { background: #f59e0b; }
+.dot.bad { background: #dc2626; }
+.tag { font-size: 11px; background: #eef2ff; color: #3730a3; border-radius: 4px; padding: 1px 6px; font-weight: 600; white-space: nowrap; }
+
+/* 功能管理 */
+.modlist { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.modrow { display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center; border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; }
+.modrow .ic { font-size: 20px; }
+.switch { position: relative; display: inline-block; width: 38px; height: 22px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span { position: absolute; inset: 0; background: #d1d5db; border-radius: 999px; transition: .15s; cursor: pointer; }
+.switch span::after { content: ''; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .15s; }
+.switch input:checked + span { background: #10b981; }
+.switch input:checked + span::after { left: 19px; }
+
+/* 运行监控 → 诊断：状态一览 */
+.status { display: grid; grid-template-columns: 170px 1fr; gap: 4px 12px; margin: 6px 0 4px; }
+.status .k { color: #374151; font-weight: 600; }
+.lv-ok::before { content: '✓ '; color: #047857; }
+.lv-warn::before { content: '! '; color: #b45309; font-weight: 700; }
+.lv-bad::before { content: '✗ '; color: #b91c1c; font-weight: 700; }
+.lv-off { color: #9ca3af; }
+.lv-bad { color: #b91c1c; }
+
+/* 旧样式在新布局里的小调整 */
+body.app #scanSummary { margin: 0 0 14px; border-radius: 12px; }
+body.app .manual { margin-top: 14px; }
+body.app .lastrun { margin-top: 14px; }
+body.app details { margin-top: 0; }
+body.app details.manual { margin-top: 14px; }
+.panel .patrow { max-width: 720px; }

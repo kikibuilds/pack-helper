@@ -2,177 +2,283 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>发货助手 · 批次</title>
+  <title>发货助手</title>
   <link rel="stylesheet" href="batch.css">
 </head>
-<body>
-  <header>
-    <h1>发货批次</h1>
+<body class="app">
+  <!-- 顶栏：所有页面共用 -->
+  <header class="topbar">
+    <a class="brand" href="#/home">📦 发货助手</a>
     <span id="ver" class="muted"></span>
-    <span id="summary" class="muted"></span>
+    <span id="crumb" class="crumb"></span>
     <div class="spacer"></div>
-    <select id="runScope" title="选择要拉取哪些平台的订单">
-      <option value="all">所有平台</option>
-      <option value="poshmark">只拉 Poshmark</option>
-      <option value="mercari">只拉 Mercari</option>
-      <option value="depop">只拉 Depop</option>
-    </select>
-    <button id="btnRun" class="primary" title="一键拉取所有平台订单（可在左边选择只拉某一个平台）">▶ 一键拉取订单</button>
-    <button id="btnStop" class="stop" disabled>■ 停止</button>
-    <button id="btnZip" class="go">⬇ 打包下载</button>
-    <span class="mailgroup">
-      <select id="mailTo" title="发给谁（在下方「设置」里添加邮箱）"></select>
-      <button id="btnMail" class="go" title="打包后直接用 Mac 上的邮件程序发出 zip，页面会显示发送成功或失败">✉ 打包并发邮件</button>
-    </span>
-    <button id="btnClear" class="danger">清空批次</button>
-    <a id="lnkDiag" class="manuallink" href="diag.html" target="_blank" title="运行报错、各平台登录状态、面单抓取失败原因，可以一键导出">🩺 诊断</a>
+    <a id="runPill" class="pill" href="#/shipping/pull" hidden></a>
     <a id="lnkManual" class="manuallink" href="https://github.com/kikibuilds/pack-helper#readme" target="_blank" rel="noopener" title="不知道怎么做时，看这里的使用手册">📖 使用手册</a>
+    <a class="toplink" href="#/settings" title="邮件账号、邮件模板、功能管理">⚙ 设置</a>
     <button id="btnLang" class="lang" title="中文 / English" data-noi18n>English</button>
   </header>
 
-  <div id="runBox" class="note run" hidden>
-    <div id="runMsg"></div>
-    <div class="muted">运行期间请保持这个页面打开，Chrome 会在后台开关一些标签页，这是正常的。订单会一边读一边出现在下面的表格里。</div>
-  </div>
-  <div id="remoteBanner" class="note run" hidden></div>
-  <div id="mailStatus" class="mailstatus" hidden></div>
-  <div id="note" class="note" hidden></div>
-  <div id="scan" class="note info" hidden></div>
+  <main>
+    <!-- 全局提示：在哪一页都看得到 -->
+    <div id="remoteBanner" class="note run" hidden></div>
+    <div id="note" class="note" hidden></div>
+    <div id="scan" class="note info" hidden></div>
 
-  <section id="scanSummary" hidden></section>
+    <!-- ===================== 首页 ===================== -->
+    <section class="view" data-view="home">
+      <h2>需要处理</h2>
+      <div id="homeTodos" class="todos"></div>
+      <h2>功能</h2>
+      <div id="homeCards" class="cards"></div>
+    </section>
 
-  <section id="poolSection" hidden>
-    <h2>待分配面单</h2>
-    <p class="muted">这些 PDF 是自动截获或手动抓到的，还没确定属于哪个订单。选择订单后点「分配」。</p>
-    <div id="pool"></div>
-  </section>
+    <!-- ===================== 发货 ===================== -->
+    <section class="view" data-view="shipping">
+      <nav class="tabs">
+        <a data-sub="pull" href="#/shipping/pull">① 拉取订单</a>
+        <a data-sub="batch" href="#/shipping/batch">② 批次与打包 <span id="tabCount" class="count"></span></a>
+        <a data-sub="settings" href="#/shipping/settings">⚙ 发货设置</a>
+      </nav>
 
-  <section>
-    <h2>订单</h2>
-    <p class="muted">
-      流程：①「一键拉取订单」把各平台待发货的订单和面单拉到这里 → ② 检查、修改（改过的内容重新拉取时会保留） → ③ 勾选要发的，点「打包下载」生成发货文件。<br>
-      面单一栏：<span class="ok">✓ 已对应</span> 可以点「打开」查看；<span class="miss">缺面单</span> 会写原因，可以点「订单页」去平台下载，再「选择」或把 PDF 拖进这一格。
-    </p>
-    <div class="tablebar">
-      <label class="check"><input type="checkbox" id="checkAll"> 全选</label>
-      <span id="tableInfo" class="muted"></span>
-    </div>
-    <table>
-      <thead>
-        <tr><th>打包</th><th>编号</th><th>平台</th><th>图片</th><th>商品名</th><th>SKU</th><th>数量</th><th>订单号</th><th>面单</th><th></th></tr>
-      </thead>
-      <tbody id="rows"></tbody>
-    </table>
-    <p id="empty" class="empty" hidden>批次是空的。点右上角「一键拉取订单」，或者用下面的「手动添加订单」。</p>
-
-    <details id="manualAdd" class="manual">
-      <summary>＋ 手动添加订单</summary>
-      <p class="muted">平台拉不到、或者线下卖出的订单，可以在这里手动加。加进已有包裹的，会和那个包裹装同一个箱子、共用一张面单。</p>
-      <div class="mgrid">
-        <label>打包编号
-          <select id="mPkg"></select>
-        </label>
-        <label>平台
-          <select id="mPlatform">
-            <option value="poshmark">Poshmark</option>
-            <option value="mercari">Mercari</option>
-            <option value="depop">Depop</option>
-            <option value="other">其他</option>
-          </select>
-        </label>
-        <label>订单号 <input id="mOrderId" placeholder="可以不填"></label>
-        <label class="wide">商品名 <input id="mTitle" placeholder="商品名或 SKU 至少填一个"></label>
-        <label>SKU <input id="mSku" placeholder="可以不填"></label>
-        <label>数量 <input id="mQty" type="number" min="1" value="1"></label>
-        <label>商品图片 <input id="mImage" type="file" accept="image/*"><img id="mImagePreview" alt="" hidden></label>
-        <label>面单（PDF 或图片） <input id="mLabel" type="file" accept="application/pdf,image/png,image/jpeg"><span id="mLabelHint" class="muted"></span></label>
+      <!-- ① 拉取订单 -->
+      <div class="pane" data-pane="pull">
+        <div class="panel">
+          <div class="row">
+            <select id="runScope" title="选择要拉取哪些平台的订单">
+              <option value="all">所有平台</option>
+              <option value="poshmark">只拉 Poshmark</option>
+              <option value="mercari">只拉 Mercari</option>
+              <option value="depop">只拉 Depop</option>
+            </select>
+            <button id="btnRun" class="primary" title="一键拉取所有平台订单（可在左边选择只拉某一个平台）">▶ 一键拉取订单</button>
+            <button id="btnStop" class="stop" disabled>■ 停止</button>
+          </div>
+          <p class="muted">依次打开各平台的待发货列表，把订单和面单拉进批次（不会自动打包），检查后到「② 批次与打包」打包。待发货列表地址在「⚙ 发货设置」里改。</p>
+          <div id="runBox" class="note run" hidden>
+            <div id="runMsg"></div>
+            <div class="muted">运行期间请保持这个页面打开，Chrome 会在后台开关一些标签页，这是正常的。订单会一边读一边出现在下面的表格里。</div>
+          </div>
+        </div>
+        <section id="scanSummary" class="panel" hidden></section>
+        <div class="row gap">
+          <a class="btnlink primary" href="#/shipping/batch">去批次检查并打包 →</a>
+        </div>
       </div>
-      <button id="btnManualAdd" class="go">添加到批次</button>
-      <button id="btnManualReset">清空</button>
-    </details>
-  </section>
 
-  <section>
-    <div id="lastRun" class="muted lastrun"></div>
-  </section>
+      <!-- ② 批次与打包 -->
+      <div class="pane" data-pane="batch">
+        <div class="toolbar">
+          <label class="check"><input type="checkbox" id="checkAll"> 全选</label>
+          <span id="tableInfo" class="muted"></span>
+          <span id="summary" class="muted"></span>
+          <div class="spacer"></div>
+          <button id="btnZip" class="go">⬇ 打包下载</button>
+          <span class="mailgroup">
+            <select id="mailTo" title="发给谁（在「设置 → 邮件」里添加邮箱）"></select>
+            <button id="btnMail" class="go" title="打包后直接用 Mac 上的邮件程序发出 zip，页面会显示发送成功或失败">✉ 打包并发邮件</button>
+          </span>
+          <button id="btnClear" class="danger">清空批次</button>
+        </div>
+        <div id="mailStatus" class="mailstatus" hidden></div>
 
-  <details id="settings">
-    <summary>设置</summary>
-    <h3>发货文件保存位置</h3>
-    <p class="muted">
-      发货文件保存在：<b>Chrome 的「下载内容」文件夹</b> / <b id="outDirShow">发货</b> / 发货_日期时间 /<br>
-      这里可以改子文件夹的名字（可以多层，例如 <code>发货/2026</code>）。要换整个根目录（比如换到另一个磁盘），请到 Chrome 的「设置 → 下载内容 → 位置」里改 —— Chrome 只允许扩展把文件存在下载文件夹里面。<br>
-      改了子文件夹不影响发邮件。
-    </p>
-    <div class="patrow"><span>子文件夹</span><input id="outDir" placeholder="发货"></div>
-    <label class="check"><input type="checkbox" id="autoCapture"> 自动截获从这几个平台下载的面单 PDF</label>
-    <h3>待发货列表页地址</h3>
-    <p class="muted">「一键拉取订单」会依次打开这些页面。第一格填列表页地址（留空表示跳过该平台）；第二格填打开后要先点的筛选按钮上的文字，例如 Depop 的「To ship」。</p>
-    <div id="listUrls"></div>
-    <h3>订单详情链接规则</h3>
-    <p class="muted">一键拉取时用来识别订单详情链接的规则（正则）。平台改版后读不到时，在这里调整。</p>
-    <div id="patterns"></div>
-    <button id="btnSaveSettings">保存设置</button>
-    <h3>邮件</h3>
-    <p class="muted">「✉ 打包并发邮件」打包后，会直接交给 Mac 上的邮件程序，用下面的<b>发件邮箱</b>发给选中的收件人，页面上会显示发送成功或失败；只点「打包下载」不会发邮件。<br>
-      发件邮箱需要是 Gmail，并且在 Mac 上运行过一次这个版本的 <code>mailer/install.sh</code>，为这个邮箱保存应用专用密码（换发件邮箱后也要为新邮箱运行一次）。</p>
-    <div class="patrow"><span>发件邮箱</span><input id="emailFrom" placeholder="example@gmail.com"></div>
-    <div class="muted">收件人（每行一个，最多 5 个，比如你自己和打包同事）：</div>
-    <textarea id="emailList" rows="3" placeholder="example@gmail.com"></textarea>
-    <div class="patrow"><span>密送（BCC）</span><input id="emailBcc" placeholder="example@gmail.com（可留空）"></div>
-    <div class="muted">每封发货邮件都会悄悄抄一份给这里的邮箱（比如你自己），用来确认已经发出；收件人看不到密送。多个用逗号隔开，最多 3 个。</div>
-    <h3>邮件标题和正文</h3>
-    <div class="patrow"><span>标题</span><input id="emailSubject"></div>
-    <div class="muted">正文：</div>
-    <textarea id="emailBody" rows="7" class="mailtpl"></textarea>
-    <div class="muted">可以用这些占位符，发信时会自动换成实际内容：</div>
-    <ul id="emailFields" class="muted fields"></ul>
-    <div class="muted">预览（用示例订单）：</div>
-    <pre id="mailPreview" class="mailpreview"></pre>
-    <button id="btnResetMailTpl">恢复默认标题和正文</button>
-    <button id="btnSaveEmails">保存邮件设置</button>
-    <button id="btnTestMail">测试邮件连接</button>
-    <div id="testMailResult" class="mailstatus" hidden></div>
-    <h3 id="remoteSettings">远程指令（邮件触发）</h3>
-    <p class="muted">人不在电脑旁时，用手机发一封邮件到<b>发件邮箱</b>（上面「邮件」里那个 Gmail），这台电脑会自动拉取订单、打包、发邮件给下面选的收件人，再回信告诉你结果。<br>
-      前提：这台电脑开着、不睡眠，Chrome 开着，三个平台在 Chrome 里保持登录。发件邮箱、密送、邮件标题和正文和上面「邮件」共用一套。</p>
-    <label class="check"><input type="checkbox" id="remoteEnabled"> 开启远程指令</label>
-    <div class="patrow"><span>允许的邮箱</span><textarea id="remoteAllow" rows="2" placeholder="example@gmail.com（每行一个，只有这些邮箱发来的指令才会执行）"></textarea></div>
-    <div class="patrow"><span>暗号</span><span class="inline"><input id="remoteSecret" placeholder="至少 4 个字，标题里要带上它"> <button id="btnGenSecret" class="small">随机生成</button></span></div>
-    <div class="patrow"><span>检查间隔</span><select id="remoteInterval"><option value="1">每 1 分钟</option><option value="2">每 2 分钟</option><option value="5">每 5 分钟</option><option value="10">每 10 分钟</option></select></div>
-    <div class="patrow"><span>打包后发给</span><select id="remoteSendTo"></select></div>
-    <label class="check"><input type="checkbox" id="remoteIncludePacked"> 远程打包时全选：批次里有面单的订单全部打包，包括之前打包过的（回信里会注明哪几单之前打包过）</label>
-    <div class="muted" style="margin-left:24px">不勾：只打包表格里勾选的订单，之前打包过的会跳过，避免同一单发两次。</div>
-    <div class="muted">指令写在邮件<b>标题</b>里（正文随便写或不写）：</div>
-    <ul id="remoteHelp" class="muted fields"></ul>
-    <button id="btnSaveRemote">保存远程设置</button>
-    <button id="btnPollNow">立即检查一次收件箱</button>
-    <div id="remotePollResult" class="mailstatus" hidden></div>
-    <div id="remoteLastPoll" class="muted"></div>
-    <details class="remotelog" open><summary>远程指令记录</summary><div id="remoteLog"></div></details>
+        <section id="poolSection" class="panel" hidden>
+          <h3>待分配面单</h3>
+          <p class="muted">这些 PDF 是自动截获或手动抓到的，还没确定属于哪个订单。选择订单后点「分配」。</p>
+          <div id="pool"></div>
+        </section>
 
-    <h3 id="healthSettings">掉线报警和每日登录检查</h3>
-    <p class="muted"><b>掉线报警</b>：电脑睡眠、断电、断网时插件自己发不出任何提醒，所以要借助外部监控服务（比如免费的 <a href="https://healthchecks.io" target="_blank" rel="noopener">healthchecks.io</a>）。插件每隔几分钟访问一次它给的「心跳网址」报平安；超过设定时间没收到，监控服务就发邮件或推送给你。<br>
-      <b>每日登录检查</b>：每天定时在后台打开一次各平台的待发货列表，跳到登录页就用上面「邮件」里的发件邮箱发一封提醒。只看有没有登录，不点任何按钮。</p>
-    <label class="check"><input type="checkbox" id="hbEnabled"> 开启掉线报警（心跳）</label>
-    <div class="patrow"><span>心跳网址</span><input id="hbUrl" placeholder="https://hc-ping.com/……（监控服务给的网址）"></div>
-    <div class="patrow"><span>报平安间隔</span><select id="hbMin"><option value="1">每 1 分钟</option><option value="5">每 5 分钟（推荐）</option><option value="10">每 10 分钟</option><option value="15">每 15 分钟</option></select></div>
-    <div class="muted">在监控服务那边把「周期」设成和这里一样，「宽限时间」设 10～30 分钟；超过「周期 + 宽限时间」没收到心跳才会提醒你，避免偶尔网络慢误报。</div>
-    <label class="check"><input type="checkbox" id="lcEnabled"> 开启每日登录检查</label>
-    <div class="patrow"><span>每天几点</span><input id="lcTime" type="time" value="08:00" style="max-width:140px"></div>
-    <div class="patrow"><span>提醒发给</span><input id="lcNotify" placeholder="example@gmail.com（留空就只记录在诊断页面，不发邮件）"></div>
-    <button id="btnSaveHealth">保存设置</button>
-    <button id="btnBeatNow">立即报一次平安</button>
-    <button id="btnLoginCheckNow">立即检查一次登录</button>
-    <div id="healthResult" class="mailstatus" hidden></div>
-    <div id="healthLast" class="muted"></div>
+        <p class="muted">
+          面单一栏：<span class="ok">✓ 已对应</span> 可以点「打开」查看；<span class="miss">缺面单</span> 会写原因，可以点「订单页」去平台下载，再「选择」或把 PDF 拖进这一格。改过的商品名、SKU、数量重新拉取时会保留。
+        </p>
+        <table>
+          <thead>
+            <tr><th>打包</th><th>编号</th><th>平台</th><th>图片</th><th>商品名</th><th>SKU</th><th>数量</th><th>订单号</th><th>面单</th><th></th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+        <p id="empty" class="empty" hidden>批次是空的。到「① 拉取订单」一键拉取，或者用下面的「手动添加订单」。</p>
 
-    <h3>已打包记录</h3>
-    <p class="muted">打包下载过的订单会被记住（45 天）。之后再拉取时，如果平台上还显示待发货，会标「之前打包过」并默认不勾选，避免重复发货。</p>
-    <button id="btnClearSent">清除已打包记录</button>
-  </details>
+        <details id="manualAdd" class="manual">
+          <summary>＋ 手动添加订单</summary>
+          <p class="muted">平台拉不到、或者线下卖出的订单，可以在这里手动加。加进已有包裹的，会和那个包裹装同一个箱子、共用一张面单。</p>
+          <div class="mgrid">
+            <label>打包编号
+              <select id="mPkg"></select>
+            </label>
+            <label>平台
+              <select id="mPlatform">
+                <option value="poshmark">Poshmark</option>
+                <option value="mercari">Mercari</option>
+                <option value="depop">Depop</option>
+                <option value="other">其他</option>
+              </select>
+            </label>
+            <label>订单号 <input id="mOrderId" placeholder="可以不填"></label>
+            <label class="wide">商品名 <input id="mTitle" placeholder="商品名或 SKU 至少填一个"></label>
+            <label>SKU <input id="mSku" placeholder="可以不填"></label>
+            <label>数量 <input id="mQty" type="number" min="1" value="1"></label>
+            <label>商品图片 <input id="mImage" type="file" accept="image/*"><img id="mImagePreview" alt="" hidden></label>
+            <label>面单（PDF 或图片） <input id="mLabel" type="file" accept="application/pdf,image/png,image/jpeg"><span id="mLabelHint" class="muted"></span></label>
+          </div>
+          <button id="btnManualAdd" class="go">添加到批次</button>
+          <button id="btnManualReset">清空</button>
+        </details>
+
+        <div id="lastRun" class="muted lastrun"></div>
+      </div>
+
+      <!-- ⚙ 发货设置 -->
+      <div class="pane" data-pane="settings">
+        <div class="panel">
+          <h3>发货文件保存位置</h3>
+          <p class="muted">
+            发货文件保存在：<b>Chrome 的「下载内容」文件夹</b> / <b id="outDirShow" data-noi18n>发货</b> / 发货_日期时间 /<br>
+            这里可以改子文件夹的名字（可以多层，例如 <code>发货/2026</code>）。要换整个根目录（比如换到另一个磁盘），请到 Chrome 的「设置 → 下载内容 → 位置」里改 —— Chrome 只允许扩展把文件存在下载文件夹里面。<br>
+            改了子文件夹不影响发邮件。
+          </p>
+          <div class="patrow"><span>子文件夹</span><input id="outDir" placeholder="发货"></div>
+          <label class="check"><input type="checkbox" id="autoCapture"> 自动截获从这几个平台下载的面单 PDF</label>
+          <h3>待发货列表页地址</h3>
+          <p class="muted">「一键拉取订单」会依次打开这些页面。第一格填列表页地址（留空表示跳过该平台）；第二格填打开后要先点的筛选按钮上的文字，例如 Depop 的「To ship」。</p>
+          <div id="listUrls"></div>
+          <h3>订单详情链接规则</h3>
+          <p class="muted">一键拉取时用来识别订单详情链接的规则（正则）。平台改版后读不到时，在这里调整。</p>
+          <div id="patterns"></div>
+          <button id="btnSaveSettings" class="primary">保存设置</button>
+        </div>
+        <div class="panel">
+          <h3>已打包记录</h3>
+          <p class="muted">打包下载过的订单会被记住（45 天）。之后再拉取时，如果平台上还显示待发货，会标「之前打包过」并默认不勾选，避免重复发货。</p>
+          <button id="btnClearSent">清除已打包记录</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 远程指令 ===================== -->
+    <section class="view" data-view="remote">
+      <div class="panel">
+        <p class="muted">人不在电脑旁时，用手机发一封邮件到<b>发件邮箱</b>（「设置 → 邮件账号」里那个 Gmail），这台电脑会自动拉取订单、打包、发邮件给下面选的收件人，再回信告诉你结果。<br>
+          前提：这台电脑开着、不睡眠，Chrome 开着，三个平台在 Chrome 里保持登录。发件邮箱、密送、邮件标题和正文和「设置 → 邮件账号」共用一套。</p>
+        <label class="check"><input type="checkbox" id="remoteEnabled"> 开启远程指令</label>
+        <div class="patrow"><span>允许的邮箱</span><textarea id="remoteAllow" rows="2" placeholder="example@gmail.com（每行一个，只有这些邮箱发来的指令才会执行）"></textarea></div>
+        <div class="patrow"><span>暗号</span><span class="inline"><input id="remoteSecret" placeholder="至少 4 个字，标题里要带上它"> <button id="btnGenSecret" class="small">随机生成</button></span></div>
+        <div class="patrow"><span>检查间隔</span><select id="remoteInterval"><option value="1">每 1 分钟</option><option value="2">每 2 分钟</option><option value="5">每 5 分钟</option><option value="10">每 10 分钟</option></select></div>
+        <div class="patrow"><span>打包后发给</span><select id="remoteSendTo"></select></div>
+        <label class="check"><input type="checkbox" id="remoteIncludePacked"> 远程打包时全选：批次里有面单的订单全部打包，包括之前打包过的（回信里会注明哪几单之前打包过）</label>
+        <div class="muted" style="margin-left:24px">不勾：只打包表格里勾选的订单，之前打包过的会跳过，避免同一单发两次。</div>
+        <div class="muted">指令写在邮件<b>标题</b>里（正文随便写或不写）：</div>
+        <ul id="remoteHelp" class="muted fields"></ul>
+        <div class="row">
+          <button id="btnSaveRemote" class="primary">保存远程设置</button>
+          <button id="btnPollNow">立即检查一次收件箱</button>
+        </div>
+        <div id="remotePollResult" class="mailstatus" hidden></div>
+        <div id="remoteLastPoll" class="muted"></div>
+        <p class="muted"><a href="#/monitor/remotelog">查看远程指令记录 →（运行监控）</a></p>
+      </div>
+    </section>
+
+    <!-- ===================== 运行监控 ===================== -->
+    <section class="view" data-view="monitor">
+      <div class="layout">
+        <nav class="side" id="monitorNav">
+          <a data-sub="alarm" href="#/monitor/alarm">掉线报警和登录检查</a>
+          <a data-sub="remotelog" href="#/monitor/remotelog">远程指令记录</a>
+          <a data-sub="diag" href="#/monitor/diag">诊断</a>
+        </nav>
+        <div>
+          <div class="pane panel" data-pane="alarm">
+            <p class="muted"><b>掉线报警</b>：电脑睡眠、断电、断网时插件自己发不出任何提醒，所以要借助外部监控服务（比如免费的 <a href="https://healthchecks.io" target="_blank" rel="noopener">healthchecks.io</a>）。插件每隔几分钟访问一次它给的「心跳网址」报平安；超过设定时间没收到，监控服务就发邮件或推送给你。</p>
+            <label class="check"><input type="checkbox" id="hbEnabled"> 开启掉线报警（心跳）</label>
+            <div class="patrow"><span>心跳网址</span><input id="hbUrl" placeholder="https://hc-ping.com/……（监控服务给的网址）"></div>
+            <div class="patrow"><span>报平安间隔</span><select id="hbMin"><option value="1">每 1 分钟</option><option value="5">每 5 分钟（推荐）</option><option value="10">每 10 分钟</option><option value="15">每 15 分钟</option></select></div>
+            <div class="muted">在监控服务那边把「周期」设成和这里一样，「宽限时间」设 10～30 分钟；超过「周期 + 宽限时间」没收到心跳才会提醒你，避免偶尔网络慢误报。</div>
+            <h3>每日登录检查</h3>
+            <p class="muted">每天定时在后台打开一次各平台的待发货列表，跳到登录页就用「设置 → 邮件账号」里的发件邮箱发一封提醒。只看有没有登录，不点任何按钮。</p>
+            <label class="check"><input type="checkbox" id="lcEnabled"> 开启每日登录检查</label>
+            <div class="patrow"><span>每天几点</span><input id="lcTime" type="time" value="08:00" style="max-width:140px"></div>
+            <div class="patrow"><span>提醒发给</span><input id="lcNotify" placeholder="example@gmail.com（留空就只记录在诊断页面，不发邮件）"></div>
+            <div class="row">
+              <button id="btnSaveHealth" class="primary">保存设置</button>
+              <button id="btnBeatNow">立即报一次平安</button>
+              <button id="btnLoginCheckNow">立即检查一次登录</button>
+            </div>
+            <div id="healthResult" class="mailstatus" hidden></div>
+            <div id="healthLast" class="muted"></div>
+          </div>
+          <div class="pane panel" data-pane="remotelog">
+            <h3>远程指令记录</h3>
+            <div id="remoteLog" class="remotelog"></div>
+          </div>
+          <div class="pane panel" data-pane="diag">
+            <h3>当前状态</h3>
+            <div id="diagStatus" class="status"></div>
+            <div class="row">
+              <a class="btnlink" href="diag.html" target="_blank">🩺 打开完整诊断页（导出 / 复制诊断信息）</a>
+            </div>
+            <p class="muted">遇到问题时在完整诊断页点「导出诊断信息」，把文件发给开发者。导出的内容里邮箱已打码，不含暗号、心跳网址的密钥、买家姓名和地址。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== 设置（全局） ===================== -->
+    <section class="view" data-view="settings">
+      <div class="layout">
+        <nav class="side">
+          <a data-sub="mail" href="#/settings/mail">邮件账号</a>
+          <a data-sub="template" href="#/settings/template">邮件标题和正文</a>
+          <a data-sub="modules" href="#/settings/modules">功能管理</a>
+          <a data-sub="about" href="#/settings/about">关于</a>
+        </nav>
+        <div>
+          <div class="pane panel" data-pane="mail">
+            <p class="muted">发货邮件、远程指令的回信、登录检查的提醒都用这里的<b>发件邮箱</b>发出。<br>
+              发件邮箱需要是 Gmail，并且在 Mac 上运行过一次这个版本的 <code>mailer/install.sh</code>，为这个邮箱保存应用专用密码（换发件邮箱后也要为新邮箱运行一次）。</p>
+            <div class="patrow"><span>发件邮箱</span><input id="emailFrom" placeholder="example@gmail.com"></div>
+            <div class="muted">收件人（每行一个，最多 5 个，比如你自己和打包同事）：</div>
+            <textarea id="emailList" rows="3" placeholder="example@gmail.com"></textarea>
+            <div class="patrow"><span>密送（BCC）</span><input id="emailBcc" placeholder="example@gmail.com（可留空）"></div>
+            <div class="muted">每封发货邮件都会悄悄抄一份给这里的邮箱（比如你自己），用来确认已经发出；收件人看不到密送。多个用逗号隔开，最多 3 个。</div>
+            <div class="row">
+              <button id="btnSaveEmails" class="primary">保存邮件设置</button>
+              <button id="btnTestMail">测试邮件连接</button>
+            </div>
+            <div id="testMailResult" class="mailstatus" hidden></div>
+          </div>
+          <div class="pane panel" data-pane="template">
+            <div class="patrow"><span>标题</span><input id="emailSubject"></div>
+            <div class="muted">正文：</div>
+            <textarea id="emailBody" rows="7" class="mailtpl"></textarea>
+            <div class="muted">可以用这些占位符，发信时会自动换成实际内容：</div>
+            <ul id="emailFields" class="muted fields"></ul>
+            <div class="muted">预览（用示例订单）：</div>
+            <pre id="mailPreview" class="mailpreview"></pre>
+            <div class="row">
+              <button data-click="#btnSaveEmails" class="primary">保存邮件设置</button>
+              <button id="btnResetMailTpl">恢复默认标题和正文</button>
+            </div>
+          </div>
+          <div class="pane panel" data-pane="modules">
+            <p class="muted">打开或关掉功能。关掉的功能不在首页显示，它的定时任务（查收件箱、报平安等）也会停下；设置会保留，下次打开还在。标「必备」的不能关。</p>
+            <div id="moduleList" class="modlist"></div>
+            <p class="muted">想加自己的功能？按 <a href="https://github.com/kikibuilds/pack-helper/blob/main/docs/MODULES.md" target="_blank" rel="noopener">docs/MODULES.md</a> 的格式写一个模块，放进插件文件夹里的 <code>modules-private/</code>，在 <code>chrome://extensions</code> 点 ↻ 重新加载就会出现在这里。</p>
+          </div>
+          <div class="pane panel" data-pane="about">
+            <p>发货助手 <span id="verAbout"></span></p>
+            <p class="muted">数据只在这台电脑上：订单、图片、面单存在 Chrome 里；Gmail 应用专用密码存在 macOS 钥匙串里；不上传到任何服务器。</p>
+            <p class="muted">非官方工具，和 Poshmark、Mercari、Depop 没有任何关系。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 自己画界面的模块（比如私有模块）挂在这里 -->
+    <div id="moduleViews"></div>
+  </main>
 
   <script src="lib/pdf-lib.min.js"></script>
   <script type="module" src="batch.js"></script>
+  <script type="module" src="core/shell.js"></script>
 </body>
 </html>

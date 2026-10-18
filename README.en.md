@@ -6,7 +6,7 @@ Pack Helper is for small resellers on **Poshmark, Mercari and Depop** who want s
 
 It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already signed into, lets you check everything in one table, and builds one shipping file per batch. An optional macOS mail helper emails the file to whoever packs, and can run the whole flow remotely when you email it a command.
 
-The interface switches between Chinese and English with the **English / 中文** button at the top right of the batch page (the choice is remembered). The shipping file itself (packing list, instructions, email text) is generated in Chinese.
+The interface switches between Chinese and English with the **English / 中文** button at the top right of the page (the choice is remembered). The shipping file itself (packing list, instructions, email text) is generated in Chinese.
 
 ```
 发货_2026-10-14_183508.zip              (发货 = "shipping")
@@ -27,7 +27,22 @@ Package codes: **P** = Poshmark, **M** = Mercari, **D** = Depop, **X** = other. 
 1. Unzip `pack-helper-V<version>.zip`. You get a `pack-helper` folder — put it in your home folder (`/Users/<you>/pack-helper`), not in Downloads.
 2. Open `chrome://extensions` and turn on **Developer mode** (top right).
 3. Click **Load unpacked** and choose the `pack-helper` folder.
-4. Pin the extension. Clicking its icon opens the batch page (or switches to it if it's already open).
+4. Pin the extension. Clicking its icon opens the Pack Helper home page (or switches to it if it's already open).
+
+
+## Layout (from V0.7)
+
+The toolbar icon opens the **home page**: "Needs attention" at the top (a platform needs sign-in, labels missing, heartbeat failing… — click to jump there), feature cards below.
+
+```
+Home
+├─ 🚚 Shipping         ① Pull orders · ② Batch & pack · ⚙ Shipping settings
+├─ 📨 Remote commands  on/off, allowed senders, passphrase, who receives the pack
+├─ 🩺 Monitoring       offline alerts & sign-in check · remote command log · diagnostics
+└─ ⚙ Settings (top right)  email account · email template · features · about
+```
+
+**Features** (⚙ Settings → Features) turns features on or off; a feature that is off disappears from the home page and its scheduled jobs stop, settings are kept. Every feature is a self-contained module — see [docs/MODULES.md](docs/MODULES.md) to add your own.
 
 ## Update (settings are kept)
 
@@ -38,14 +53,14 @@ Settings, recipients, the batch table and packed history live in Chrome and surv
 
 ## Pull orders
 
-Click **▶ Pull orders** on the batch page (the drop-down next to it limits the pull to one platform). The extension:
+On the home page open **🚚 Shipping → ① Pull orders** and click **▶ Pull orders** (the drop-down next to it limits the pull to one platform). The extension:
 
 1. opens each platform's to-ship list (on Depop it clicks "To ship" first);
 2. reads each order — item name, photo, SKU, quantity, order number (Mercari also reads the item page for the full title; a SKU in square brackets at the end of a title is picked up automatically);
 3. downloads the prepaid label (it never clicks Buy / Purchase / Pay / Upgrade / QR — it only downloads labels that are already paid for);
 4. lists everything in the table. Nothing is packed automatically.
 
-Keep the batch page open while it runs. Check the table — edit names, SKUs, quantities, drag in missing labels — then tick what to ship and click **⬇ Pack & download** or **✉ Pack & email**.
+Keep the Pack Helper page open while it runs (you can switch to other pages; the top bar shows progress). A clean pull switches to **② Batch & pack** by itself; if there were problems it stays on the pull tab so you see "This pull" first. Check the table — edit names, SKUs, quantities, drag in missing labels — then tick what to ship and click **⬇ Pack & download** or **✉ Pack & email**.
 
 - **No duplicates:** packed orders are remembered for 45 days. If a platform still lists one as to-ship, it is marked "Packed before" and left unticked. Click the × on the mark to clear it.
 - **Missing labels** show the reason and a link to the order page. Packages without a label stay in the batch and are flagged red on the packing list.
@@ -63,15 +78,15 @@ Set up once:
 
 1. Turn on 2-Step Verification for the Gmail account, then create an app password at <https://myaccount.google.com/apppasswords>.
 2. In Terminal, run `bash ~/pack-helper/mailer/install.sh`, enter the Gmail address and paste the app password. It is stored only in the macOS Keychain.
-3. Quit Chrome completely (⌘Q) and reopen it, then click **Test mail connection** under Settings → Email.
+3. Quit Chrome completely (⌘Q) and reopen it, then click **Test mail connection** under ⚙ Settings → Email account.
 
-Under Settings → Email you set the sender, up to 5 recipients, optional BCC (recipients can't see it), and the subject/body template (placeholders `{日期}` date, `{包裹数}` packages, `{件数}` items, `{附件}` attachment name, `{缺面单提醒}` missing-label warning, `{包裹清单}` package list), with a live preview.
+Under ⚙ Settings → Email account you set the sender, up to 5 recipients and an optional BCC (recipients can't see it); ⚙ Settings → Email subject and body holds the template (placeholders `{日期}` date, `{包裹数}` packages, `{件数}` items, `{附件}` attachment name, `{缺面单提醒}` missing-label warning, `{包裹清单}` package list), with a live preview.
 
 ## Remote commands (by email)
 
 Away from the computer? Email the sender Gmail from your phone and this computer pulls, packs, emails the pack and replies with the result.
 
-Under Settings → Remote commands: tick **Enable remote commands** (it checks that sender, allowed senders, passphrase and "send pack to" are all filled in, then saves), list the **allowed senders**, set a **passphrase** (or click Generate), the check interval and who receives the pack.
+On the home page open **📨 Remote commands**: tick **Enable remote commands** (it checks that sender, allowed senders, passphrase and "send pack to" are all filled in, then saves), list the **allowed senders**, set a **passphrase** (or click Generate), the check interval and who receives the pack.
 
 Put the passphrase and a command word in the email **subject**:
 
@@ -92,7 +107,7 @@ Open `打包清单.html` from the **unzipped** folder in Chrome. For each packag
 
 ## Offline alerts, daily sign-in check and diagnostics
 
-Batch page → Settings → "Offline alerts and daily sign-in check"; the diagnostics page is "🩺 Diagnostics" at the top right of the batch page.
+Home page → **🩺 Monitoring**: "Offline alerts & sign-in check", "Remote command log" and "Diagnostics" (a status overview; "Open the full diagnostics page" exports or copies the report).
 
 **Offline alerts (heartbeat)**: when the computer sleeps, loses power or goes offline, the extension cannot send anything itself, so an external monitoring service does the alerting. The extension visits the service's "heartbeat URL" every few minutes; if no ping arrives in time, the service emails or pushes an alert to you.
 1. Sign up for a free monitoring service such as [healthchecks.io](https://healthchecks.io) (Better Stack, Cronitor and similar work too), create a check with a 5-minute period and a 10–30-minute grace time, and choose email or the phone app for notifications.
@@ -132,7 +147,7 @@ Everything depends on Chrome staying open on this computer with all three platfo
 ## Notes
 
 - **Unofficial.** Not affiliated with Poshmark, Mercari or Depop. It only opens your own seller pages in your own signed-in Chrome, at roughly human pace. Platform terms on automation differ — use your own judgment and don't run it at high frequency.
-- **Pages change.** Reading rules match the pages as of October 2026. If a platform redesign breaks something, "This pull → Detailed diagnostics" on the batch page shows the page structure; list URLs and link patterns are editable in Settings.
+- **Pages change.** Reading rules match the pages as of October 2026. If a platform redesign breaks something, "This pull → Detailed diagnostics" under Shipping → ① Pull orders shows the page structure; list URLs and link patterns are editable under ⚙ Shipping settings.
 - **Local only.** Orders, images and labels stay in this Chrome (chrome.storage + IndexedDB); the Gmail app password stays in the Keychain; nothing is uploaded anywhere.
 - **Fixed extension ID.** The `key` in `manifest.json` pins the ID to `ohpffalnkclojleccgidgjnlggnpjfab`, which the mail helper trusts. If you fork it, remove `key` and set `EXT_ID` in `mailer/install.sh` to your own ID.
 - The mail helper currently supports **macOS + Gmail** only.
