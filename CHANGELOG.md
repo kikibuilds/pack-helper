@@ -2,6 +2,10 @@
 
 标「需要重新运行 install.sh」的版本改了 Mac 上的邮件程序，其余版本只要替换文件夹、在 `chrome://extensions` 点 ↻ 重新加载。
 
+## V0.8.2 — 修好 Whatnot packing slip 标签页越开越多
+- Whatnot 从后台标签页打开 packing slip 时，Chrome 把它的「来源」记成当时在前台的标签页，扩展认不出这是 slip：既没读到 SKU，也没关掉。现在按网址认 slip（Whatnot 的 S3 PDF），读完就关；晚几秒才打开的也会关掉。
+- 读不到 slip 的包裹不会再每次拉取都重新生成一份。
+
 ## V0.8.1 — Whatnot packing slip 修正
 - 修好读 Whatnot packing slip 时文字乱码：slip 的 PDF 用了好几种字体，以前把它们的字形对照表混在一起用，除了地址那几行其余都读错。现在每种字体用自己的对照表。
 - 按真实的 slip 格式读 SKU：Attributes 一栏每件商品写「Order 订单号」和「SKU …」，按 Whatnot 订单号对应到每件商品。
