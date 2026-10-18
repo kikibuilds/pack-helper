@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "发货助手 Pack Helper",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "从 Poshmark、Mercari、Depop、Whatnot 收集待发货订单和预付面单，生成带图片的拣货单 + 面单的发货文件 (.zip)。",
   "permissions": [
     "storage",
@@ -29,8 +29,20 @@
     "service_worker": "background.js",
     "type": "module"
   },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "action": {
-    "default_title": "发货助手：打开批次页"
+    "default_title": "发货助手：打开批次页",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxaJjzHryeOEaJIBC9NGm47c7AXEnaFy6UBZy0GzEhZewQQw4igJRzAqOyH+l2RzFZiyv88whUKS6DvzsOLSflRR7VIwd0V1p7oMAaXDYrvCP4/Ai1V8SgJ8jBx6rjOsurLyh5OcKZp/meSX9PX22jJ8COPwPPGxFeMaXr/E5o9P0EJSVKUFyV6oTpkA9nfgB52NPK1O0WFqZFzKcubjXk2atWNPf2QuoOyc3jsB3Lij0ybIiFaYFR6KFEMAiUrxjPPw0yRM3SxMOskvCapGHk2xz4W64l8VF6w4BK2re0lTayuyN/sIHPmc3QpWYP8L8RmwoXBP+pMhaMkcdS5O0ZwIDAQAB",
   "content_scripts": [
