@@ -61,7 +61,7 @@
 
 点浏览器工具栏上的扩展图标，打开发货助手首页（已经开着就切过去），点「🚚 发货」→「① 拉取订单」→「▶ 一键拉取订单」（旁边的下拉菜单可以只拉某一个平台），扩展会：
 
-1. 依次打开 Poshmark、Mercari、Depop、Whatnot 的待发货列表页（Depop 会先自动点「To ship」，只抓没发货的订单；Whatnot 打开 Seller Hub → Shipments，已送达 / 已寄出的包裹自动跳过）；
+1. 依次打开 Poshmark、Mercari、Depop、Whatnot 的待发货列表页（Depop 会先自动点「To ship」，只抓没发货的订单；Whatnot 打开 Seller Hub → Shipments 的「All Shows & Marketplace」+「Unfulfilled」，直播和 Marketplace 的待发货包裹都在；已寄出 / 已送达的自动跳过）；
 2. 逐单打开订单详情，读取商品名、图片、SKU、数量、订单号；
 3. 在订单页找「打印 / 下载面单」并抓取 PDF；
 4. 每次运行在 `发货/` 下新建一个文件夹 `发货_日期_时间/`，里面放发货 `发货_日期_时间.zip` 和报告 `报告_日期_时间.txt`；

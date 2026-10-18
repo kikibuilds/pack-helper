@@ -2,6 +2,10 @@
 
 标「需要重新运行 install.sh」的版本改了 Mac 上的邮件程序，其余版本只要替换文件夹、在 `chrome://extensions` 点 ↻ 重新加载。
 
+## V0.8.7 — Whatnot 默认列表改成「All Shows & Marketplace + Unfulfilled」
+- 「⚙ 发货设置」里 Whatnot 的默认待发货列表地址改成 Shipments 的「All Shows & Marketplace」+「Unfulfilled」筛选：直播（Shows）和 Marketplace 卖出的订单都能拉到，列表里只有还没发货的包裹，拉得更快，也不会被一页 50 个截断。以前的默认地址只写了「All Statuses」、没写销售渠道，可能漏掉直播订单。
+- 保存过旧默认地址的会自动换成新的；你自己改过的地址不动。
+
 ## V0.8.6 — 缺面单的包裹也能先拣货
 - 发货包里多一个「打印-packing slip（缺面单）.pdf」：每个缺面单的包裹一张卡，格式和对照卡一样（编号、SKU、数量、商品名），4×6 热敏纸直接打，可以先照着拣货、装袋，面单补好再贴。补好面单后再拉取一次，面单会进下一个发货包。
 - 不用平台官方的 packing slip（里面有价格、收件地址，打包的人不需要）。

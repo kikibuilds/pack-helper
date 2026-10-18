@@ -57,7 +57,7 @@ Settings, recipients, the batch table and packed history live in Chrome and surv
 
 On the home page open **🚚 Shipping → ① Pull orders** and click **▶ Pull orders** (the drop-down next to it limits the pull to one platform). The extension:
 
-1. opens each platform's to-ship list (on Depop it clicks "To ship" first; on Whatnot it opens Seller Hub → Shipments and skips delivered / shipped ones);
+1. opens each platform's to-ship list (on Depop it clicks "To ship" first; on Whatnot it opens Seller Hub → Shipments filtered to "All Shows & Marketplace" + "Unfulfilled", so both show and marketplace sales are included, and skips anything already shipped);
 2. reads each order — item name, photo, SKU, quantity, order number (Mercari also reads the item page for the full title; a SKU in square brackets at the end of a title is picked up automatically);
 3. downloads the prepaid label (it never clicks Buy / Purchase / Pay / Upgrade / QR — it only downloads labels that are already paid for);
 4. lists everything in the table. Nothing is packed automatically.
