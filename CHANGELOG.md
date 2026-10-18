@@ -2,6 +2,11 @@
 
 标「需要重新运行 install.sh」的版本改了 Mac 上的邮件程序，其余版本只要替换文件夹、在 `chrome://extensions` 点 ↻ 重新加载。
 
+## V0.8.5 — Whatnot 面单只打印面单页
+- Whatnot「Print Shipping Label」下载的 PDF 前面是 packing slip、最后一页才是面单。现在会自动拆开：打印文件（面单带对照卡）里只放面单页，不会把 packing slip 打到热敏面单纸上。
+- 已经生成面单的包裹，SKU 直接从这个 PDF 里自带的 packing slip 读，不再去点「Generate Packing Slip」（Whatnot 那边不会多生成一份）。还没生成面单（Needs Label）的照旧。
+- 按 2026-10 的真实页面核对：已生成面单的包裹状态是「Ready to Ship」，下载按钮是「Print Shipping Label」；「Generate New Label」「Mark Package as Shipped」绝不会点。
+
 ## V0.8.4 — 手动打开的 packing slip 不再被关掉
 - 修好：手动点 Whatnot「Print Packing Slip」一打开就被关掉。V0.8.2 读完 slip 后会盯 45 秒，把这期间新开的所有 slip 标签页都关掉，连你手动打开的也一起关了（重新加载扩展 1 分钟后售出同步会自动跑一次，所以刚更新完特别容易碰上）。现在扩展每次只关它自己点出来的那一个 slip；只有完全没读到 slip 时才多等 20 秒，关掉晚开的那一个就停。
 
