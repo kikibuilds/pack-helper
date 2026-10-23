@@ -3,7 +3,7 @@ import {
   getPool, assignPool, removeFromPool, getSettings, saveSettings, clearSent, unmarkSent, addManualOrder, AUTO_PLATFORMS, cleanOutDir,
 } from './lib/store.js';
 import { assignCodes, PLATFORM_META, shownOrderId } from './lib/report.js';
-import { exportPackage } from './lib/package.js';
+import { exportPackage, holdBadCounts } from './lib/package.js';
 import { runAll, requestStop } from './lib/autorun.js';
 import { sendPackageMail, checkMailer } from './lib/mail.js';
 import { buildEmail, DEFAULT_EMAIL_SUBJECT, DEFAULT_EMAIL_BODY, EMAIL_FIELDS } from './lib/report.js';
@@ -80,6 +80,11 @@ async function render() {
         : `<span class="miss">缺面单</span>${r.labelError ? `<span class="why">${esc(r.labelError)}</span>` : ''}`;
       label += ` <button class="small" data-act="pick">${owner ? '换一张' : '选择'}</button><input type="file" accept="application/pdf,image/png,image/jpeg" hidden>`;
       if (!owner && r.url) label += ` <a class="small" href="${esc(r.url)}" target="_blank">订单页↗</a>`;
+      if (r.countError) {
+        label = `<div class="counterr"><span class="miss">⛔ 件数不对，不会打包</span><span class="why">${esc(r.countError)}</span>`
+          + ` <button class="small" data-act="countok" title="已经在平台上核对过，这一单就是现在表格里的这些商品">件数已核对</button>`
+          + `${r.url ? ` <a class="small" href="${esc(r.url)}" target="_blank">订单页↗</a>` : ''}</div>${label}`;
+      }
     }
     html.push(`
       <tr data-id="${r.id}" data-group="${esc(groupKey(r))}" class="${on ? '' : 'off'}">
@@ -158,6 +163,14 @@ $('#rows').addEventListener('click', async (ev) => {
   const act = btn.dataset.act;
   if (act === 'del' && confirm('从批次中删除这一行？')) { await removeOrder(id); await render(); }
   if (act === 'dup') { await duplicateOrder(id); await render(); }
+  if (act === 'countok') {
+    const group = btn.closest('tr').dataset.group;
+    const items = (await getOrders()).filter((o) => groupKey(o) === group);
+    const n = items.reduce((k, o) => k + (Number(o.qty) || 1), 0);
+    if (!confirm(`确认这一单在平台上就是 ${n} 件、表格里的商品都对吗？\n确认后这一单会正常打包。`)) return;
+    for (const o of items) await updateOrder(o.id, { expectedItems: n, countError: '' });
+    await render();
+  }
   if (act === 'unpack') {
     const group = btn.closest('tr').dataset.group;
     if (!confirm('去掉「已打包」标记？\n去掉后这一单会自动勾选，下次拉取也不会再标「之前打包过」，打包时会再打进发货文件。')) return;
@@ -216,14 +229,22 @@ $('#pool').addEventListener('click', async (ev) => {
 // —— 打包下载 / 打包并发邮件：只打包勾选的订单 ——
 async function doPack({ sendTo = [], sendFrom = '', sendBcc = [] } = {}) {
   const all = await getOrders();
-  const orders = all.filter((o) => o.include !== false);
-  if (!orders.length) { alert(all.length ? '没有勾选任何订单。' : '批次是空的。'); return; }
+  const picked = all.filter((o) => o.include !== false);
+  if (!picked.length) { alert(all.length ? '没有勾选任何订单。' : '批次是空的。'); return; }
+  // 件数对不上的包裹不打包（平台写着 2 件只读到 1 件，员工会少寄）
+  const { held, ok: orders } = holdBadCounts(picked);
+  const heldText = held.map((h) => `  ${PLATFORM_META[h.platform] ? PLATFORM_META[h.platform].name : h.platform} 订单 ${h.orderId || '—'}：${h.why}`);
+  if (!orders.length) {
+    alert(`勾选的订单件数都对不上，没有可以打包的：\n${heldText.join('\n')}\n\n请打开订单页核对，用「+件」补上漏掉的商品（或改数量），或者点「件数已核对」。`);
+    return;
+  }
   const rows = assignCodes(orders);
   const packages = new Set(rows.map((r) => r.code)).size;
   const missing = [...new Set(rows.filter((r) => !r.labelFile).map((r) => r.code))];
   const prev = [...new Set(rows.filter((r) => r.prevPacked || r.packedAt).map((r) => r.code))];
   const lines = [`将打包 ${packages} 个包裹、${rows.reduce((s, r) => s + r.qty, 0)} 件商品。`];
   if (sendTo.length) lines.push(`打包后用 ${sendFrom} 发邮件给：${sendTo.join('、')}${sendBcc.length ? `（密送 ${sendBcc.join('、')}）` : ''}`);
+  if (held.length) lines.push(`⛔ 这 ${held.length} 单件数对不上，这次不打包：\n${heldText.join('\n')}`);
   if (missing.length) lines.push(`⚠ ${missing.join('、')} 还没有面单（打包清单上会标红，提醒员工先不要发）。`);
   if (prev.length) lines.push(`⚠ ${prev.join('、')} 之前已经打包过，确定要再打包一次吗？`);
   const noTitle = rows.filter((r) => !r.title).map((r) => r.code);
@@ -843,9 +864,12 @@ async function runRemoteJob(job) {
   const all = await getOrders();
   const orders = s.remote.includePacked !== false ? all : all.filter((o) => o.include !== false);
   const key = (o) => `${o.platform}|${o.orderId || o.id}`;
-  const labeled = new Set(orders.filter((o) => o.hasLabel).map(key));
-  const ready = orders.filter((o) => labeled.has(key(o)));
-  const missing = [...new Map(orders.filter((o) => !labeled.has(key(o))).map((o) => [key(o), o])).values()];
+  // 件数对不上的（平台写着 2 件只读到 1 件之类）不打包，回信里单独列出来
+  const { held, ok: countOk } = holdBadCounts(orders);
+  const labeled = new Set(countOk.filter((o) => o.hasLabel).map(key));
+  const ready = countOk.filter((o) => labeled.has(key(o)));
+  const missing = [...new Map(countOk.filter((o) => !labeled.has(key(o))).map((o) => [key(o), o])).values()];
+  const heldLines = held.map((h) => `  ${PNAME[h.platform] || h.platform} 订单 ${h.orderId || '—'}：${h.why}`);
   const readyPk = new Set(ready.map(key)).size;
   const readyUnits = ready.reduce((n, o) => n + (Number(o.qty) || 1), 0);
   const missingLines = missing.map((o) => `  ${PNAME[o.platform] || o.platform} 订单 ${o.orderId || '—'} · ${String(o.title || '').slice(0, 50)}`);
@@ -855,6 +879,7 @@ async function runRemoteJob(job) {
   const prevTail = prevPk.length ? ['', `其中之前打包过的（${prevPk.length} 个，请确认没有已经寄出）：`,
     ...prevPk.map((o) => `  ${PNAME[o.platform] || o.platform} 订单 ${o.orderId || '—'} · ${String(o.title || '').slice(0, 50)}`)] : [];
   const tail = [
+    ...(heldLines.length ? ['', `⛔ 件数对不上、没有打包的（${held.length} 个，请用远程桌面打开订单页核对）：`, ...heldLines] : []),
     ...(skippedPk ? ['', `另有 ${skippedPk} 个之前打包过的订单没算进来（设置里没开「远程打包时全选」）。`] : []),
     ...(missingLines.length ? ['', `缺面单、没有打包的（${missing.length} 个）：`, ...missingLines, '  可以等平台出面单后再发一次「打包」指令。'] : []),
     ...(problems.length ? ['', '需要处理：', ...problems.map((p) => `  ⚠ ${p}`)] : []),
