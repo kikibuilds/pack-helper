@@ -27,7 +27,7 @@ pack-helper/
 export default {
   id: 'hello',                  // 唯一英文名（小写字母、数字、-），也是地址：#/hello
   name: '示例',                 // 首页卡片、顶栏上显示的名字
-  icon: '👋',
+  icon: '👋',                   // 首页卡片和功能管理里的图标（内置模块用 core/icons.js 里的线条图标，自己加的模块用这个 emoji）
   desc: '首页卡片上的一句话简介',
   order: 50,                    // 排序，内置模块是 10 / 20 / 30
   private: true,                // 功能管理里标「私有」（可选）

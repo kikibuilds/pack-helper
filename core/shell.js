@@ -1,6 +1,7 @@
 // 发货助手的外壳：首页、页面切换（路由）、功能管理、顶栏的运行进度。
 // 各功能本身的逻辑不在这里（发货 / 远程指令 / 运行监控在 batch.js），这里只负责「去哪一页、显示什么卡片」。
 import { listModules, getModule, isEnabled } from './registry.js';
+import { ICONS, BADGES, iconOf } from './icons.js';
 import '../modules/index.js';
 import { getSettings, saveSettings, getOrders } from '../lib/store.js';
 import { buildDiagnostics } from '../lib/diag.js';
@@ -48,7 +49,7 @@ async function route() {
     for (const a of cur.querySelectorAll('[data-sub]')) a.classList.toggle('on', a.dataset.sub === sub);
   }
   const name = mod ? mod.name : PAGE_NAMES[view];
-  $('#crumb').innerHTML = name ? `› <b>${esc(name)}</b>` : '';
+  $('#crumb').innerHTML = name ? `<span class="sep">/</span><b>${esc(name)}</b>` : '';
   document.title = name ? `发货助手 · ${name}` : '发货助手';
   if (mod && typeof mod.onShow === 'function') { try { mod.onShow(sub); } catch { /* ignore */ } }
   const extra = paneHooks.get(`${view}/${sub}`);
@@ -103,22 +104,22 @@ async function renderHome() {
     try { if (m.status) st = (await m.status(ctx)) || st; } catch (e) { st = { level: 'bad', text: `状态读取出错：${e.message}` }; }
     try { if (m.todos) todos.push(...((await m.todos(ctx)) || [])); } catch { /* 忽略单个模块的错误 */ }
     cards.push(`
-      <a class="card${m.core ? ' main' : ''}" href="#/${esc(m.id)}">
-        <div class="h"><span class="ic">${esc(m.icon || '•')}</span>${esc(m.name)}</div>
-        <div class="muted">${esc(m.desc || '')}</div>
+      <a class="card" href="#/${esc(m.id)}">
+        <div class="h"><span class="ic">${iconOf(m)}</span><b>${esc(m.name)}</b>${BADGES[m.id] ? `<span class="badge-s">${esc(BADGES[m.id])}</span>` : ''}</div>
+        <div class="desc">${esc(m.desc || '')}</div>
         <div class="st"><span class="dot ${esc(st.level)}"></span>${esc(st.text)}</div>
       </a>`);
   }
   cards.push(`
     <a class="card soon" href="#/settings/modules">
-      <div class="h"><span class="ic">➕</span>功能管理</div>
-      <div class="muted">打开或关掉功能；也可以照着 docs/MODULES.md 加自己的功能</div>
+      <div class="h"><span class="ic">${ICONS.modules}</span><b>功能管理</b></div>
+      <div class="desc">打开或关掉功能；也可以照着 docs/MODULES.md 加自己的功能</div>
     </a>`);
   if (privateError) todos.push({ level: 'bad', title: '私有模块加载出错', detail: privateError, route: '#/settings/modules' });
   todos.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
   $('#homeTodos').innerHTML = todos.length
-    ? todos.map((t) => `<a class="todo ${esc(t.level)}" href="${esc(t.route || '#/home')}"><b>${esc(t.title)}</b><span>${esc(t.detail || '')}</span></a>`).join('')
-    : '<div class="todo ok"><b>一切正常</b><span>没有需要处理的事</span></div>';
+    ? todos.map((t) => `<a class="todo ${esc(t.level)}" href="${esc(t.route || '#/home')}"><span class="dot ${esc(t.level)}"></span><span><b>${esc(t.title)}</b><span>${esc(t.detail || '')}</span></span></a>`).join('')
+    : '<div class="todo ok"><span class="dot ok"></span><span><b>一切正常</b><span>没有需要处理的事</span></span></div>';
   $('#homeCards').innerHTML = cards.join('');
 }
 
@@ -127,7 +128,7 @@ async function renderModuleList() {
   const s = await getSettings();
   $('#moduleList').innerHTML = listModules().map((m) => `
     <div class="modrow">
-      <span class="ic">${esc(m.icon || '•')}</span>
+      <span class="ic">${iconOf(m)}</span>
       <div><b>${esc(m.name)}</b>${m.private ? ' <span class="tag">私有</span>' : ''}<div class="muted">${esc(m.desc || '')}</div></div>
       ${m.core ? '<span class="tag">必备</span>'
         : `<label class="switch"><input type="checkbox" data-mod="${esc(m.id)}" ${isEnabled(s, m.id) ? 'checked' : ''}><span></span></label>`}
