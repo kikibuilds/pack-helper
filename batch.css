@@ -58,7 +58,10 @@ summary { cursor: pointer; font-weight: 600; }
 .packaged table { margin-top: 6px; }
 .packaged td { padding: 4px 8px; font-size: 13px; }
 
-#runScope { width: auto; border: 1px solid #d1d5db; background: #fff; padding: 6px 8px; border-radius: 6px; font: inherit; }
+#runScope { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; border: 1px solid #d1d5db; background: #fff; padding: 5px 10px; border-radius: 6px; }
+#runScope label { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer; margin: 0; font-weight: normal; }
+#runScope input { width: auto; margin: 0; }
+#runScope.off { opacity: .6; pointer-events: none; }
 .mailstatus { margin: 12px 0; padding: 10px 14px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; }
 .mailstatus .steps { display: flex; gap: 18px; flex-wrap: wrap; font-weight: 600; }
 .mailstatus .step { color: #9ca3af; }

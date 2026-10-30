@@ -9,7 +9,7 @@
 - 员工最少需要的信息：每个包裹装哪些商品（图片 / 商品名 / SKU / 数量）和对应的面单。
 - 人不一定在电脑旁（甚至可能在国外），需要能远程启动、远程知道结果。
 
-范围（当前）：Poshmark、Mercari、Depop 这三个**平台出预付面单**的国内订单，加上 Whatnot（面单在 Whatnot 上生成，买家付运费）。
+范围（当前）：Poshmark、Mercari、Depop 这三个**平台出预付面单**的国内订单，加上 Whatnot（面单在 Whatnot 上生成，买家付运费）和 eBay（只拉在 eBay 上买的面单，见 `lib/ebay.js`）。
 
 ## 2. 整体架构
 

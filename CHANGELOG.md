@@ -2,6 +2,16 @@
 
 标「需要重新运行 install.sh」的版本改了 Mac 上的邮件程序，其余版本只要替换文件夹、在 `chrome://extensions` 点 ↻ 重新加载。
 
+## V0.8.11 — 拉取订单：勾选平台 + eBay
+- **「🚚 发货 → ① 拉取订单」的平台选择改成勾选框**（Poshmark / Mercari / Depop / Whatnot / eBay）：勾哪几个就只拉哪几个，按钮跟着变成「▶ 一键拉取订单」（全勾）/「▶ 拉取 eBay 订单」/「▶ 拉取 N 个平台的订单」，一个都不勾时按钮不能点。勾选记在设置里，远程指令和地址栏 `#run` 也按这个拉；`#run=depop` 仍然只拉一个平台。
+- **新增 eBay**：和 Whatnot 一样只抓平台上已经有的面单，**仅限在 eBay 平台购买的面单支持拉取**（页面上有说明）。
+  - 读「All orders」列表的状态：「Shipped · Label created」且在「Shipping labels」里有记录的 → 打开 eBay 面单页，点页面上的「Download label」取 PDF；自己填运单号的（第三方面单）拉不到，不放进批次，报告里列出来；「Awaiting shipment」的加进批次标「缺面单」；已扫描 / 已送达 / 退款 / 取消的跳过。
+  - 只点「Download label」，绝不点「Print label」（弹打印对话框）、「Get another label」（再买一张）、「Cancel label」等。
+  - eBay 的「Download label」用 data: 网址下载；Chrome 下载记录里的 data: 网址会被截短，所以在网页里直接截住完整的 PDF。
+  - 商品名、图片、SKU（Custom label）、数量从订单详情页读，不读买家姓名地址。
+  - 「⚙ 发货设置」里多了 eBay 的列表地址（默认 `https://www.ebay.com/sh/ord/?filter=status:ALL_ORDERS`），每日登录检查也会查 eBay。
+- **合并加了密的面单**：eBay 的面单 PDF 是加了密的（打开不要密码，只禁止复制 / 修改）。合并前先用空密码解密（RC4 / AES-128，新文件 `lib/pdfdecrypt.js`），不然复制进「打印-面单带对照卡.pdf」的页面是乱码；Whatnot 拆面单也用同一套。要密码才能打开的 PDF 会报错，单独的面单照旧放在「面单」文件夹里。
+
 ## V0.8.10 — 新外观
 - 新图标：工具栏、扩展管理页和标签页上的图标换成蓝色圆角方块 + 白色线条盒子（`icons/icon.svg`；16～512 px 的 PNG 都由它高分辨率渲染，Retina 屏也清楚）。页面左上角用同一个 logo。
 - 统一配色和样式：浅灰背景、白色面板、蓝色主按钮，圆角、按钮、标签页、表格统一。

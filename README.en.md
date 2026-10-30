@@ -2,7 +2,7 @@
 
 [中文说明](README.md)
 
-Pack Helper is for small resellers on **Poshmark, Mercari, Depop and Whatnot** who want someone else to do the picking and packing — without giving that person access to any selling account.
+Pack Helper is for small resellers on **Poshmark, Mercari, Depop, Whatnot and eBay** who want someone else to do the picking and packing — without giving that person access to any selling account.
 
 It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already signed into, lets you check everything in one table, and builds one shipping file per batch. An optional macOS mail helper emails the file to whoever packs, and can run the whole flow remotely when you email it a command.
 
@@ -55,7 +55,7 @@ Settings, recipients, the batch table and packed history live in Chrome and surv
 
 ## Pull orders
 
-On the home page open **🚚 Shipping → ① Pull orders** and click **▶ Pull orders** (the drop-down next to it limits the pull to one platform). The extension:
+On the home page open **🚚 Shipping → ① Pull orders** and click **▶ Pull orders** (tick which platforms to pull next to it; the choice is remembered and remote commands use it too). The extension:
 
 1. opens each platform's to-ship list (on Depop it clicks "To ship" first; on Whatnot it opens Seller Hub → Shipments filtered to "All Shows & Marketplace" + "Unfulfilled", so both show and marketplace sales are included, and skips anything already shipped);
 2. reads each order — item name, photo, SKU, quantity, order number (Mercari also reads the item page for the full title; a SKU in square brackets at the end of a title is picked up automatically);
@@ -67,6 +67,12 @@ Keep the Pack Helper page open while it runs (you can switch to other pages; the
 - **No duplicates:** packed orders are remembered for 45 days. If a platform still lists one as to-ship, it is marked "Packed before" and left unticked. Click the × on the mark to clear it.
 - **Missing labels** show the reason and a link to the order page. Packages without a label stay in the batch and are flagged red on the packing list. The zip also has "打印-packing slip（缺面单）.pdf": one card per package without a label, in the same format as the lookup card (code, order #, SKU × qty, item name; for Whatnot each item also shows its own Order #). The packer can pick and bag first and write the code on the bag; once you add the label and pull again, it goes into the next zip.
 - **Shipped orders** (e.g. Mercari "Awaiting rating from buyer") are skipped.
+- **eBay:** **only labels bought on eBay can be pulled** — buy the label on eBay first, then pull. Code E.
+  - Reads Seller Hub → Orders → "All orders" (last 90 days): once a label is bought on eBay the order shows "Shipped · Label created" and is no longer under Awaiting shipment.
+  - "Shipped · Label created" orders that appear under "Shipping labels" (/ship/labels/seller-hub): the extension opens the row's Actions → "Download label" (eBay's label page), then clicks "Download label" on that page to get the PDF (never "Print label"). eBay label PDFs are encrypted with no open password; they are decrypted before being merged into the print file.
+  - **Orders where you typed in a tracking number yourself (third-party label) have no label file and are not added to the batch**; the report lists their order numbers and the last 4 digits of the tracking number.
+  - "Awaiting shipment" orders (no label yet) are added and flagged as missing a label so you can pick them first. The extension **never buys a label** and never clicks "Get another label", "Cancel label" or "Mark not shipped".
+  - Orders already scanned by the carrier, delivered, refunded or canceled are skipped.
 - **Whatnot:** every item is its own order (Order #); items from the same buyer are bundled into one Shipment = one package, code W. Generate the label in Whatnot yourself (check weight and size); the extension only downloads labels that already exist ("Ready to Ship", button "Print Shipping Label"). That PDF starts with Whatnot's packing slip and ends with the label — the extension splits it so only the label page is printed. Shipments still showing "Needs Label" are flagged as missing a label; the extension **never clicks "Generate Label"**, "Generate New Label" or "Mark Package as Shipped". The SKU comes from square brackets in the title, otherwise from the "SKU" line on the packing slip (taken from the label PDF, or via "Generate Packing Slip" when there is no label yet), matched to each item by order number. Whatnot's own packing slip is only read for SKUs and never put in the zip (it shows prices and addresses).
 
 ## Add an order by hand
@@ -117,7 +123,7 @@ Home page → **🩺 Monitoring**: "Offline alerts & sign-in check", "Remote com
 2. Paste the URL it gives you (e.g. `https://hc-ping.com/…`) into "Heartbeat URL", tick "Enable offline alerts", click "Ping now" and confirm the service received it.
 3. The grace time prevents false alarms from a brief slow connection: you are alerted only after period + grace with no ping.
 
-**Daily sign-in check**: once a day the extension opens the Poshmark, Mercari, Depop and Whatnot to-ship lists in the background; if one lands on a sign-in page it emails "Alert email to" from the sender under "Email" (leave it empty to only record the result on the diagnostics page). It only looks — no clicks, no batch changes — and waits 15 minutes if a pull or remote command is running. "Check sign-in now" runs it immediately. The computer must be on and the mail helper installed.
+**Daily sign-in check**: once a day the extension opens the Poshmark, Mercari, Depop, Whatnot and eBay to-ship lists in the background; if one lands on a sign-in page it emails "Alert email to" from the sender under "Email" (leave it empty to only record the result on the diagnostics page). It only looks — no clicks, no batch changes — and waits 15 minutes if a pull or remote command is running. "Check sign-in now" runs it immediately. The computer must be on and the mail helper installed.
 
 **Diagnostics page**: extension version, mail helper, each platform's sign-in status (from the daily check or the last pull, whichever is newer), heartbeat, remote commands, errors and label failures from the last pull, and orders still missing a label. When something goes wrong, click "⬇ Export diagnostics" or "Copy diagnostics" and send it to the developer: email addresses are masked; the passphrase, heartbeat URL key and buyer names/addresses are never included.
 
@@ -149,7 +155,7 @@ Everything depends on Chrome staying open on this computer with all three platfo
 
 ## Notes
 
-- **Unofficial.** Not affiliated with Poshmark, Mercari, Depop or Whatnot. It only opens your own seller pages in your own signed-in Chrome, at roughly human pace. Platform terms on automation differ — use your own judgment and don't run it at high frequency.
+- **Unofficial.** Not affiliated with Poshmark, Mercari, Depop, Whatnot or eBay. It only opens your own seller pages in your own signed-in Chrome, at roughly human pace. Platform terms on automation differ — use your own judgment and don't run it at high frequency.
 - **Pages change.** Reading rules match the pages as of October 2026. If a platform redesign breaks something, "This pull → Detailed diagnostics" under Shipping → ① Pull orders shows the page structure; list URLs and link patterns are editable under ⚙ Shipping settings.
 - **Local only.** Orders, images and labels stay in this Chrome (chrome.storage + IndexedDB); the Gmail app password stays in the Keychain; nothing is uploaded anywhere.
 - **Fixed extension ID.** The `key` in `manifest.json` pins the ID to `ohpffalnkclojleccgidgjnlggnpjfab`, which the mail helper trusts. If you fork it, remove `key` and set `EXT_ID` in `mailer/install.sh` to your own ID.

@@ -427,7 +427,10 @@ $('#btnSaveEmails').addEventListener('click', async () => {
 
 // —— 一键全自动运行 ——
 function setBusy(busy, running = false) {
-  for (const id of ['#btnRun', '#btnZip', '#btnMail', '#mailTo', '#btnClear', '#runScope']) $(id).disabled = busy;
+  for (const id of ['#btnRun', '#btnZip', '#btnMail', '#mailTo', '#btnClear']) $(id).disabled = busy;
+  for (const c of document.querySelectorAll('#runScope input')) c.disabled = busy;
+  $('#runScope').classList.toggle('off', busy);
+  if (!busy) { updateRunLabel(); $('#btnRun').disabled = !checkedPlatforms().length; }
   $('#btnStop').disabled = !running;
   $('#btnStop').textContent = '■ 停止';
 }
@@ -439,23 +442,39 @@ $('#btnStop').addEventListener('click', () => {
   $('#runMsg').textContent = '正在停止，关闭后台打开的标签页…';
 });
 
-// 下拉菜单：所有平台 / 只拉某一个平台（记住上次的选择）
-const scopeNames = { all: '所有平台', poshmark: 'Poshmark', mercari: 'Mercari', depop: 'Depop', whatnot: 'Whatnot' };
-try { const v = localStorage.getItem('runScope'); if (v && scopeNames[v]) $('#runScope').value = v; } catch { /* ignore */ }
+// 勾选拉哪几个平台（记在设置里，远程指令也按这个拉）
+const scopeNames = { poshmark: 'Poshmark', mercari: 'Mercari', depop: 'Depop', whatnot: 'Whatnot', ebay: 'eBay' };
+const scopeBoxes = () => [...document.querySelectorAll('#runScope input[type=checkbox]')];
+const checkedPlatforms = () => scopeBoxes().filter((c) => c.checked).map((c) => c.value);
 function updateRunLabel() {
-  const v = $('#runScope').value;
-  $('#btnRun').textContent = v === 'all' ? '▶ 一键拉取订单' : `▶ 拉取 ${scopeNames[v]} 订单`;
-  try { localStorage.setItem('runScope', v); } catch { /* ignore */ }
+  const on = checkedPlatforms();
+  const all = on.length === scopeBoxes().length;
+  $('#btnRun').textContent = all ? '▶ 一键拉取订单' : on.length === 1 ? `▶ 拉取 ${scopeNames[on[0]]} 订单` : `▶ 拉取 ${on.length} 个平台的订单`;
+  $('#ebayNote').hidden = !on.includes('ebay');
 }
-$('#runScope').addEventListener('change', updateRunLabel);
-updateRunLabel();
+(async () => {
+  const s = await getSettings();
+  const saved = Array.isArray(s.pullPlatforms) && s.pullPlatforms.length ? s.pullPlatforms : null;
+  if (saved) for (const c of scopeBoxes()) c.checked = saved.includes(c.value);
+  updateRunLabel();
+})();
+for (const c of scopeBoxes()) {
+  c.addEventListener('change', async () => {
+    updateRunLabel();
+    $('#btnRun').disabled = !checkedPlatforms().length;
+    const cur = await getSettings();
+    await saveSettings({ ...cur, pullPlatforms: checkedPlatforms() });
+  });
+}
 
 async function startRun(scope) {
-  const v = typeof scope === 'string' && scopeNames[scope] ? scope : $('#runScope').value;
-  $('#runScope').value = v; updateRunLabel();
-  const platforms = v === 'all' ? null : [v];
-  const what = v === 'all' ? 'Poshmark、Mercari、Depop、Whatnot' : scopeNames[v];
-  if (!confirm(`将打开 ${what} 的待发货列表，把订单和面单拉到这个页面的表格里（不会自动打包）。\n检查无误后再点「打包下载」。\n运行期间请保持本页打开。开始吗？`)) return;
+  // #run=depop：只拉这一个平台（不改勾选）；其他情况按勾选的拉
+  // #run（地址栏带的）：按设置里存的勾选拉（页面上的勾选可能还没读出来）
+  const platforms = typeof scope === 'string' && scopeNames[scope] ? [scope] : scope === 'all' ? null : checkedPlatforms();
+  const shown = platforms || checkedPlatforms();
+  if (!shown.length) { showNote('请至少勾选一个平台。', true); return; }
+  const what = shown.map((p) => scopeNames[p]).join('、');
+  if (!confirm(`将打开 ${what} 的待发货列表，把订单和面单拉到这个页面的表格里（不会自动打包）。\n检查无误后再点「打包下载」。\n${shown.includes('ebay') ? '\neBay 只拉在 eBay 上买的面单（自己填运单号的不放进批次）。' : ''}\n运行期间请保持本页打开。开始吗？`)) return;
   setBusy(true, true);
   $('#runBox').hidden = false;
   $('#note').hidden = true;

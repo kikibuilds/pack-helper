@@ -2,9 +2,9 @@
 
 [English](README.en.md) · 页面右上角的「English / 中文」按钮可以切换界面语言。
 
-> **English summary** — A Chrome (Manifest V3) extension for small resellers on **Poshmark, Mercari, Depop and Whatnot**. It pulls every "to ship" order and its prepaid shipping label from the seller dashboards you are already logged into, then builds one zip per batch: a packing checklist (HTML/CSV) with item photos, SKUs and per-package checkboxes, all labels merged into one print-ready PDF with lookup cards, and instructions for the person who packs. An optional macOS helper (Python, stdlib only) emails the zip through Gmail and can run the whole flow remotely when you email it a command. The UI and docs are in Chinese. Not affiliated with any of these platforms — see "需要注意" below.
+> **English summary** — A Chrome (Manifest V3) extension for small resellers on **Poshmark, Mercari, Depop, Whatnot and eBay**. It pulls every "to ship" order and its shipping label from the seller dashboards you are already logged into (you tick which platforms to pull; for eBay only labels bought on eBay can be pulled), then builds one zip per batch: a packing checklist (HTML/CSV) with item photos, SKUs and per-package checkboxes, all labels merged into one print-ready PDF with lookup cards, and instructions for the person who packs. An optional macOS helper (Python, stdlib only) emails the zip through Gmail and can run the whole flow remotely when you email it a command. The UI and docs are in Chinese. Not affiliated with any of these platforms — see "需要注意" below.
 
-把 Poshmark、Mercari、Depop、Whatnot 的待发货订单和预付面单收进一个"批次"，检查后一键生成发货文件，可以直接发邮件给打包的同事；人不在电脑旁时，还可以发一封邮件远程触发整个流程。
+把 Poshmark、Mercari、Depop、Whatnot、eBay 的待发货订单和面单收进一个"批次"，检查后一键生成发货文件，可以直接发邮件给打包的同事；人不在电脑旁时，还可以发一封邮件远程触发整个流程。
 
 ```
 发货_2026-10-14_183508.zip
@@ -59,9 +59,9 @@
 
 ## 一键拉取订单（推荐）
 
-点浏览器工具栏上的扩展图标，打开发货助手首页（已经开着就切过去），点「🚚 发货」→「① 拉取订单」→「▶ 一键拉取订单」（旁边的下拉菜单可以只拉某一个平台），扩展会：
+点浏览器工具栏上的扩展图标，打开发货助手首页（已经开着就切过去），点「🚚 发货」→「① 拉取订单」→「▶ 一键拉取订单」（旁边勾选要拉哪几个平台，勾选会记住，远程指令也按这个拉），扩展会：
 
-1. 依次打开 Poshmark、Mercari、Depop、Whatnot 的待发货列表页（Depop 会先自动点「To ship」，只抓没发货的订单；Whatnot 打开 Seller Hub → Shipments 的「All Shows & Marketplace」+「Unfulfilled」，直播和 Marketplace 的待发货包裹都在；已寄出 / 已送达的自动跳过）；
+1. 依次打开勾选的 Poshmark、Mercari、Depop、Whatnot、eBay 的待发货列表页（Depop 会先自动点「To ship」，只抓没发货的订单；Whatnot 打开 Seller Hub → Shipments 的「All Shows & Marketplace」+「Unfulfilled」，直播和 Marketplace 的待发货包裹都在；已寄出 / 已送达的自动跳过）；
 2. 逐单打开订单详情，读取商品名、图片、SKU、数量、订单号；
 3. 在订单页找「打印 / 下载面单」并抓取 PDF；
 4. 每次运行在 `发货/` 下新建一个文件夹 `发货_日期_时间/`，里面放发货 `发货_日期_时间.zip` 和报告 `报告_日期_时间.txt`；
@@ -71,6 +71,12 @@
 
 几个规则：
 - **绝不替你花钱**：带 Buy / Purchase / Pay / Confirm / Upgrade / $ 字样的按钮一律不点。
+- **eBay**：**仅限在 eBay 平台购买的面单支持拉取**，必须先在 eBay 上买好面单再拉取，编号 E 开头。
+  - 读 Seller Hub → Orders 的「All orders」（最近 90 天）：在 eBay 上买了面单以后订单状态是「Shipped · Label created」，不在 Awaiting shipment 里了。
+  - 「Shipped · Label created」且在「Shipping labels」（/ship/labels/seller-hub）里有记录的 → 从那一行的 Actions 菜单「Download label」打开 eBay 面单页，再点页面上的「Download label」取 PDF（不点「Print label」）。eBay 的面单 PDF 加了密（打开不要密码），合并打印文件前会先解密。
+  - **自己填运单号的（第三方面单）没有面单文件，拉不到，不放进批次**，报告里列出订单号和运单尾号。
+  - 「Awaiting shipment」（还没买面单）的加进批次、标「缺面单」，可以先拣货。扩展**不会替你买面单**，也不会点「Get another label」「Cancel label」「Mark not shipped」。
+  - 已被快递扫描（Carrier scan / In transit）、已送达、退款、取消的跳过。
 - **Whatnot**：每件商品是一个单独的订单（Order #），同一买家的几件会合进一个 Shipment（打包号）= 一个包裹，编号 W 开头。
   - **面单**：你先在 Whatnot 确认重量尺寸、点「Generate Label」，扩展只下载已经生成好的面单（状态「Ready to Ship」，按钮「Print Shipping Label」）。这个 PDF 前面是 Whatnot 的 packing slip、最后一页是面单，扩展会自动拆开，打印文件里只放面单页。还是「Needs Label」的包裹标「缺面单」——扩展**不会替你点「Generate Label」**，也不会点「Generate New Label」「Mark Package as Shipped」。
   - **SKU**：先看标题里的方括号 `[…]`；没有的话，已生成面单的从面单 PDF 里自带的 packing slip 读，还没生成的点「Generate Packing Slip」读（Attributes 里的「SKU」，按订单号对应到每件商品）。官方 packing slip 只用来读 SKU，不会放进发货包（里面有价格和地址）。
@@ -136,7 +142,7 @@
 
 ## 小功能
 
-- **SKU 记忆**：Poshmark / Mercari / Depop / Whatnot 没有 SKU 时，在「② 批次与打包」的表格里填一次，下次同名商品自动带出。
+- **SKU 记忆**：Poshmark / Mercari / Depop / Whatnot / eBay 没有 SKU 时，在「② 批次与打包」的表格里填一次，下次同名商品自动带出。
 - **多件订单**：点该行的「+件」，在同一个包裹下再加一件商品。
 
 ## 掉线报警、每日登录检查和诊断页面
@@ -148,7 +154,7 @@
 2. 复制它给的网址（比如 `https://hc-ping.com/……`），填进「心跳网址」，勾「开启掉线报警」，点「立即报一次平安」，监控服务那边显示收到就好了。
 3. 宽限时间是为了避免偶尔网络慢误报：超过「周期 + 宽限时间」都没收到心跳才会提醒。
 
-**每日登录检查**：每天定时在后台打开一次 Poshmark、Mercari、Depop、Whatnot 的待发货列表，跳到登录页就用「邮件」里的发件邮箱发一封提醒到「提醒发给」的邮箱（留空就只记录在诊断页面）。只看有没有登录，不点任何按钮、不改批次。一键拉取或远程指令正在运行时，会推迟 15 分钟再查。点「立即检查一次登录」可以马上试一次。前提是电脑开着、装好了邮件程序。
+**每日登录检查**：每天定时在后台打开一次 Poshmark、Mercari、Depop、Whatnot、eBay 的待发货列表，跳到登录页就用「邮件」里的发件邮箱发一封提醒到「提醒发给」的邮箱（留空就只记录在诊断页面）。只看有没有登录，不点任何按钮、不改批次。一键拉取或远程指令正在运行时，会推迟 15 分钟再查。点「立即检查一次登录」可以马上试一次。前提是电脑开着、装好了邮件程序。
 
 **诊断页面**：集中显示插件版本、邮件程序、各平台登录状态（每日检查或上次拉取，哪个新显示哪个）、心跳、远程指令、上次拉取的报错和面单抓取失败原因、批次里还缺面单的订单。遇到问题点「⬇ 导出诊断信息」或「复制诊断信息」发给开发者：里面的邮箱已打码，不含暗号、心跳网址的密钥、买家姓名和地址。
 
@@ -180,7 +186,7 @@
 
 ## 需要注意
 
-- **非官方工具**：和 Poshmark、Mercari、Depop、Whatnot 没有任何关系。它只是在你已经登录的 Chrome 里，替你打开你自己的卖家后台、读页面、点「下载面单」，节奏和人工操作差不多。各平台的服务条款对自动化工具有不同规定，请自己判断、自担风险；不要高频运行。
+- **非官方工具**：和 Poshmark、Mercari、Depop、Whatnot、eBay 没有任何关系。它只是在你已经登录的 Chrome 里，替你打开你自己的卖家后台、读页面、点「下载面单」，节奏和人工操作差不多。各平台的服务条款对自动化工具有不同规定，请自己判断、自担风险；不要高频运行。
 - **绝不替你花钱**：带 Buy / Purchase / Pay / Upgrade / QR 等字样的按钮一律不点，只下载已经买好的预付面单。
 - **页面会改版**：读取规则是按 2026 年 10 月的页面写的（Poshmark 订单页、Mercari 订单页 + 商品页、Depop sellinghub 列表）。平台改版后可能读不到，「发货 → ① 拉取订单」的「本次拉取情况 → 详细诊断」会列出页面结构，方便调整；列表页地址和订单链接规则也可以在「⚙ 发货设置」里改。
 - **数据只在本机**：订单、图片、面单存在这台电脑的 Chrome 里（chrome.storage + IndexedDB）；Gmail 应用专用密码只存在 macOS 钥匙串里；不上传到任何服务器。发货文件里不含买家姓名和地址（面单 PDF 本身除外）。
