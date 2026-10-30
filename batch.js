@@ -2,7 +2,7 @@ import {
   getOrders, updateOrder, removeOrder, duplicateOrder, clearBatch, getImage, getLabel, setLabel,
   getPool, assignPool, removeFromPool, getSettings, saveSettings, clearSent, unmarkSent, addManualOrder, AUTO_PLATFORMS, cleanOutDir,
 } from './lib/store.js';
-import { assignCodes, PLATFORM_META, shownOrderId } from './lib/report.js';
+import { assignCodes, PLATFORM_META, shownOrderId, noOrders } from './lib/report.js';
 import { exportPackage, holdBadCounts } from './lib/package.js';
 import { runAll, requestStop } from './lib/autorun.js';
 import { sendPackageMail, checkMailer } from './lib/mail.js';
@@ -521,7 +521,8 @@ async function renderScanSummary() {
   if (!lastScan) { box.hidden = true; return; }
   const x = lastScan.extra || {};
   const name = (p) => (PLATFORM_META[p] || PLATFORM_META.other).name;
-  const plat = Object.entries(x.platforms || {}).map(([p, st]) =>
+  const plat = Object.entries(x.platforms || {}).map(([p, st]) => noOrders(p, st, x.loginIssues || [])
+    ? `<li>${esc(name(p))}：没有待发货订单</li>` :
     `<li>${esc(name(p))}：列表中 ${st.found} 单，新加入 ${st.added}，已寄出跳过 ${st.shipped || 0}，之前打包过 ${st.skipped}，失败 ${st.failed}</li>`).join('');
   const bad = [
     ...(x.loginIssues || []).map((p) => `${name(p)} 需要重新登录`),
@@ -877,6 +878,7 @@ async function runRemoteJob(job) {
   const { lastScan } = await chrome.storage.local.get('lastScan');
   const x = (lastScan && lastScan.extra) || {};
   const problems = problemLines(x);
+  const emptyNames = Object.entries(x.platforms || {}).filter(([p, st]) => noOrders(p, st, x.loginIssues || [])).map(([p]) => PNAME[p] || p);
 
   // ② 哪些可以打包：有面单的（同一订单有一行有面单就算有）；
   //    设置「全选」时批次里全部订单都算（包括之前打包过的），否则只算表格里勾选的
@@ -901,6 +903,7 @@ async function runRemoteJob(job) {
     ...(heldLines.length ? ['', `⛔ 件数对不上、没有打包的（${held.length} 个，请用远程桌面打开订单页核对）：`, ...heldLines] : []),
     ...(skippedPk ? ['', `另有 ${skippedPk} 个之前打包过的订单没算进来（设置里没开「远程打包时全选」）。`] : []),
     ...(missingLines.length ? ['', `缺面单、没有打包的（${missing.length} 个）：`, ...missingLines, '  可以等平台出面单后再发一次「打包」指令。'] : []),
+    ...(emptyNames.length ? ['', `${emptyNames.join('、')}：没有待发货订单`] : []),
     ...(problems.length ? ['', '需要处理：', ...problems.map((p) => `  ⚠ ${p}`)] : []),
   ];
 
